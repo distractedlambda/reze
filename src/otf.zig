@@ -129,6 +129,7 @@ const Font = struct {
     cvt: []const FWORD,
     fpgm: []const u8,
     head: Head,
+    loca: []const u32,
     maxp: Maxp,
     prep: []const u8,
 
@@ -373,6 +374,7 @@ const Font = struct {
         cvt: ?[]const u8 = null,
         fpgm: ?[]const u8 = null,
         head: ?[]const u8 = null,
+        loca: ?[]const u8 = null,
         maxp: ?[]const u8 = null,
         prep: ?[]const u8 = null,
 
@@ -400,6 +402,7 @@ const Font = struct {
                     @bitCast(u32, @as([4]u8, "cvt ".*)) => result.cvt = table_data,
                     @bitCast(u32, @as([4]u8, "fpgm".*)) => result.fpgm = table_data,
                     @bitCast(u32, @as([4]u8, "head".*)) => result.head = table_data,
+                    @bitCast(u32, @as([4]u8, "loca".*)) => result.loca = table_data,
                     @bitCast(u32, @as([4]u8, "maxp".*)) => result.maxp = table_data,
                     @bitCast(u32, @as([4]u8, "prep".*)) => result.prep = table_data,
                     else => {},
@@ -412,27 +415,54 @@ const Font = struct {
 
     fn parse(comptime file_data: []const u8) !@This() {
         const directory = try Directory.parse(file_data);
+
+        const cmap = try Cmap.parse(directory.cmap orelse return error.MissingCmapTable);
+
+        const cvt = blk: {
+            if (directory.cvt) |cvt_data| {
+                var reader = Reader.init(cvt_data);
+                var values: [cvt_data.len / 2]FWORD = undefined; // FIXME divExact
+                for (&values) |*v| v.* = try reader.nextFWORD();
+                break :blk &values;
+            } else {
+                break :blk &.{};
+            }
+        };
+
+        const fpgm = directory.fpgm orelse &.{};
+
+        const head = try Head.parse(directory.head orelse return error.MissingHeadTable);
+
+        const maxp = try Maxp.parse(directory.maxp orelse return error.MissingMaxpTable);
+
+        const loca = blk: {
+            var reader = Reader.init(directory.loca orelse break :blk &.{});
+
+            var offsets: [@as(usize, maxp.num_glyphs) + 1]u32 = undefined;
+
+            switch (head.index_to_loc_format) {
+                .Offset16 => {
+                    for (&offsets) |*e| e.* = @as(u32, try reader.nextUint16()) * 2;
+                },
+
+                .Offset32 => {
+                    for (&offsets) |*e| e.* = try reader.nextUint32();
+                },
+            }
+
+            break :blk &offsets;
+        };
+
+        const prep = directory.prep orelse &.{};
+
         return comptime .{
-            .cmap = try Cmap.parse(directory.cmap orelse return error.MissingCmapTable),
-
-            .cvt = blk: {
-                if (directory.cvt) |cvt_data| {
-                    var reader = Reader.init(cvt_data);
-                    var values: [cvt_data.len / 2]FWORD = undefined; // FIXME divExact
-                    for (&values) |*v| v.* = try reader.nextFWORD();
-                    break :blk &values;
-                } else {
-                    break :blk &.{};
-                }
-            },
-
-            .fpgm = directory.fpgm orelse &.{},
-
-            .head = try Head.parse(directory.head orelse return error.MissingHeadTable),
-
-            .maxp = try Maxp.parse(directory.maxp orelse return error.MissingMaxpTable),
-
-            .prep = directory.prep orelse &.{},
+            .cmap = cmap,
+            .cvt = cvt,
+            .fpgm = fpgm,
+            .head = head,
+            .loca = loca,
+            .maxp = maxp,
+            .prep = prep,
         };
     }
 };
