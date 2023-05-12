@@ -129,9 +129,11 @@ const Font = struct {
     cvt: []const FWORD,
     fpgm: []const u8,
     head: Head,
+    hhea: Hhea,
     loca: []const u32,
     maxp: Maxp,
     prep: []const u8,
+    vhea: ?Vhea,
 
     const Cmap = union(enum) {
         Format4: Format4,
@@ -328,6 +330,57 @@ const Font = struct {
         }
     };
 
+    const Hhea = struct {
+        ascender: FWORD,
+        descender: FWORD,
+        line_gap: FWORD,
+        advance_width_max: UFWORD,
+        min_left_side_bearing: FWORD,
+        min_right_side_bearing: FWORD,
+        x_max_extent: FWORD,
+        caret_slope_rise: i16,
+        caret_slope_run: i16,
+        caret_offset: i16,
+        number_of_h_metrics: u16,
+
+        fn parse(data: []const u8) !@This() {
+            var reader = Reader.init(data);
+            const major_version = try reader.nextUint16();
+            if (major_version != 1) return error.UnsupportedHheaTableVersion;
+            _ = try reader.nextUint16(); // minorVersion
+            const ascender = try reader.nextFWORD();
+            const descender = try reader.nextFWORD();
+            const line_gap = try reader.nextFWORD();
+            const advance_width_max = try reader.nextUFWORD();
+            const min_left_side_bearing = try reader.nextFWORD();
+            const min_right_side_bearing = try reader.nextFWORD();
+            const x_max_extent = try reader.nextFWORD();
+            const caret_slope_rise = try reader.nextInt16();
+            const caret_slope_run = try reader.nextInt16();
+            const caret_offset = try reader.nextInt16();
+            _ = try reader.nextInt16(); // reserved
+            _ = try reader.nextInt16(); // reserved
+            _ = try reader.nextInt16(); // reserved
+            _ = try reader.nextInt16(); // reserved
+            const metric_data_format = try reader.nextInt16();
+            if (metric_data_format != 0) return error.UnsupportedHorizontalMetricDataFormat;
+            const number_of_h_metrics = try reader.nextUint16();
+            return .{
+                .ascender = ascender,
+                .descender = descender,
+                .line_gap = line_gap,
+                .advance_width_max = advance_width_max,
+                .min_left_side_bearing = min_left_side_bearing,
+                .min_right_side_bearing = min_right_side_bearing,
+                .x_max_extent = x_max_extent,
+                .caret_slope_rise = caret_slope_rise,
+                .caret_slope_run = caret_slope_run,
+                .caret_offset = caret_offset,
+                .number_of_h_metrics = number_of_h_metrics,
+            };
+        }
+    };
+
     const Maxp = struct {
         num_glyphs: u16,
         max_points: u16,
@@ -369,14 +422,66 @@ const Font = struct {
         }
     };
 
+    const Vhea = struct {
+        vert_typo_ascender: i16,
+        vert_typo_descender: i16,
+        vert_typo_line_gap: i16,
+        advance_height_max: i16,
+        min_top_side_bearing: i16,
+        min_bottom_side_bearing: i16,
+        y_max_extent: i16,
+        caret_slope_rise: i16,
+        caret_slope_run: i16,
+        caret_offset: i16,
+        num_of_long_ver_metrics: u16,
+
+        fn parse(data: []const u8) !@This() {
+            var reader = Reader.init(data);
+            const version = try reader.nextVersion16Dot16();
+            if (version < 0x00010000 or version >= 0x00020000) return error.UnsupportedVheaTableVersion;
+            const vert_typo_ascender = try reader.nextInt16();
+            const vert_typo_descender = try reader.nextInt16();
+            const vert_typo_line_gap = try reader.nextInt16();
+            const advance_height_max = try reader.nextInt16();
+            const min_top_side_bearing = try reader.nextInt16();
+            const min_bottom_side_bearing = try reader.nextInt16();
+            const y_max_extent = try reader.nextInt16();
+            const caret_slope_rise = try reader.nextInt16();
+            const caret_slope_run = try reader.nextInt16();
+            const caret_offset = try reader.nextInt16();
+            _ = try reader.nextInt16(); // reserved
+            _ = try reader.nextInt16(); // reserved
+            _ = try reader.nextInt16(); // reserved
+            _ = try reader.nextInt16(); // reserved
+            const metric_data_format = try reader.nextInt16();
+            if (metric_data_format != 0) return error.UnsupportedVerticalMetricDataFormat;
+            const num_of_long_ver_metrics = try reader.nextUint16();
+            return .{
+                .vert_typo_ascender = vert_typo_ascender,
+                .vert_typo_descender = vert_typo_descender,
+                .vert_typo_line_gap = vert_typo_line_gap,
+                .advance_height_max = advance_height_max,
+                .min_top_side_bearing = min_top_side_bearing,
+                .min_bottom_side_bearing = min_bottom_side_bearing,
+                .y_max_extent = y_max_extent,
+                .caret_slope_rise = caret_slope_rise,
+                .caret_slope_run = caret_slope_run,
+                .caret_offset = caret_offset,
+                .num_of_long_ver_metrics = num_of_long_ver_metrics,
+            };
+        }
+    };
+
     const Directory = struct {
         cmap: ?[]const u8 = null,
         cvt: ?[]const u8 = null,
         fpgm: ?[]const u8 = null,
         head: ?[]const u8 = null,
+        hhea: ?[]const u8 = null,
         loca: ?[]const u8 = null,
         maxp: ?[]const u8 = null,
         prep: ?[]const u8 = null,
+        vhea: ?[]const u8 = null,
 
         fn parse(file_data: []const u8) !@This() {
             var result: @This() = .{};
@@ -402,9 +507,11 @@ const Font = struct {
                     @bitCast(u32, @as([4]u8, "cvt ".*)) => result.cvt = table_data,
                     @bitCast(u32, @as([4]u8, "fpgm".*)) => result.fpgm = table_data,
                     @bitCast(u32, @as([4]u8, "head".*)) => result.head = table_data,
+                    @bitCast(u32, @as([4]u8, "hhea".*)) => result.hhea = table_data,
                     @bitCast(u32, @as([4]u8, "loca".*)) => result.loca = table_data,
                     @bitCast(u32, @as([4]u8, "maxp".*)) => result.maxp = table_data,
                     @bitCast(u32, @as([4]u8, "prep".*)) => result.prep = table_data,
+                    @bitCast(u32, @as([4]u8, "vhea".*)) => result.vhea = table_data,
                     else => {},
                 }
             }
@@ -433,6 +540,8 @@ const Font = struct {
 
         const head = try Head.parse(directory.head orelse return error.MissingHeadTable);
 
+        const hhea = try Hhea.parse(directory.hhea orelse return error.MissingHheaTable);
+
         const maxp = try Maxp.parse(directory.maxp orelse return error.MissingMaxpTable);
 
         const loca = blk: {
@@ -455,14 +564,18 @@ const Font = struct {
 
         const prep = directory.prep orelse &.{};
 
+        const vhea = if (directory.vhea) |data| try Vhea.parse(data) else null;
+
         return comptime .{
             .cmap = cmap,
             .cvt = cvt,
             .fpgm = fpgm,
             .head = head,
+            .hhea = hhea,
             .loca = loca,
             .maxp = maxp,
             .prep = prep,
+            .vhea = vhea,
         };
     }
 };
