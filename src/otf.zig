@@ -117,6 +117,9 @@ const Reader = struct {
 
 const Font = struct {
     cmap: Cmap,
+    cvt: ?[]const FWORD,
+    fpgm: ?[]const u8,
+    maxp: Maxp,
 
     const Cmap = union(enum) {
         Format4: Format4,
@@ -225,8 +228,55 @@ const Font = struct {
         }
     };
 
+    const Maxp = struct {
+        num_glyphs: u16,
+        max_points: u16,
+        max_contours: u16,
+        max_composite_points: u16,
+        max_composite_contours: u16,
+        max_zones: u16,
+        max_twilight_points: u16,
+        max_storage: u16,
+        max_function_defs: u16,
+        max_instruction_defs: u16,
+        max_stack_elements: u16,
+        max_size_of_instructions: u16,
+        max_component_elements: u16,
+        max_component_depth: u16,
+
+        fn parse(data: []const u8) @This() {
+            var reader = Reader.init(data);
+
+            const version = reader.nextUint32();
+
+            if (version < 0x00010000) {
+                unreachable;
+            }
+
+            return .{
+                .num_glyphs = reader.nextUint16(),
+                .max_points = reader.nextUint16(),
+                .max_contours = reader.nextUint16(),
+                .max_composite_points = reader.nextUint16(),
+                .max_composite_contours = reader.nextUint16(),
+                .max_zones = reader.nextUint16(),
+                .max_twilight_points = reader.nextUint16(),
+                .max_storage = reader.nextUint16(),
+                .max_function_defs = reader.nextUint16(),
+                .max_instruction_defs = reader.nextUint16(),
+                .max_stack_elements = reader.nextUint16(),
+                .max_size_of_instructions = reader.nextUint16(),
+                .max_component_elements = reader.nextUint16(),
+                .max_component_depth = reader.nextUint16(),
+            };
+        }
+    };
+
     const Directory = struct {
         cmap: ?[]const u8 = null,
+        cvt: ?[]const u8 = null,
+        fpgm: ?[]const u8 = null,
+        maxp: ?[]const u8 = null,
 
         fn parse(file_data: []const u8) @This() {
             var result: @This() = .{};
@@ -248,6 +298,9 @@ const Font = struct {
 
                 switch (@bitCast(u32, tag)) {
                     @bitCast(u32, @as([4]u8, "cmap".*)) => result.cmap = table_data,
+                    @bitCast(u32, @as([4]u8, "cvt ".*)) => result.cvt = table_data,
+                    @bitCast(u32, @as([4]u8, "fpgm".*)) => result.fpgm = table_data,
+                    @bitCast(u32, @as([4]u8, "maxp".*)) => result.maxp = table_data,
                     else => {},
                 }
             }
@@ -258,9 +311,23 @@ const Font = struct {
 
     fn parse(comptime file_data: []const u8) @This() {
         const directory = Directory.parse(file_data);
-
-        return .{
+        return comptime .{
             .cmap = Cmap.parse(directory.cmap.?),
+
+            .cvt = blk: {
+                if (directory.cvt) |cvt_data| {
+                    var reader = Reader.init(cvt_data);
+                    var values: [cvt_data.len / 2]FWORD = undefined;
+                    for (&values) |*v| v.* = reader.nextFWORD();
+                    break :blk &values;
+                } else {
+                    break :blk null;
+                }
+            },
+
+            .fpgm = directory.fpgm,
+
+            .maxp = Maxp.parse(directory.maxp.?),
         };
     }
 };
