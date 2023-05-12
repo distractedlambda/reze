@@ -18,51 +18,56 @@ const Reader = struct {
         return .{ .source = source };
     }
 
-    fn nextBytes(self: *@This(), comptime len: usize) [len]u8 {
+    fn nextBytes(self: *@This(), comptime len: usize) ![len]u8 {
+        if (self.source.len < len) return error.OutOfBounds;
         defer self.source = self.source[len..];
         return self.source[0..len].*;
     }
 
-    fn nextInt(self: *@This(), comptime T: type) T {
+    fn nextInt(self: *@This(), comptime T: type) !T {
         switch (@typeInfo(T)) {
             .Int => {
-                const int = @bitCast(T, self.nextBytes(@divExact(@bitSizeOf(T), 8)));
+                const int = @bitCast(T, try self.nextBytes(@divExact(@bitSizeOf(T), 8)));
                 return if (@import("builtin").cpu.arch.endian() == .Big) int else @byteSwap(int);
             },
 
             .Enum => |info| {
-                return @intToEnum(T, self.nextInt(info.tag_type));
+                return std.meta.intToEnum(T, try self.nextInt(info.tag_type));
+            },
+
+            .Struct => |info| {
+                return @bitCast(T, try self.nextInt(info.backing_integer.?));
             },
 
             else => unreachable,
         }
     }
 
-    fn nextUint8(self: *@This()) u8 {
+    fn nextUint8(self: *@This()) !u8 {
         return self.nextInt(u8);
     }
 
-    fn nextInt8(self: *@This()) i8 {
+    fn nextInt8(self: *@This()) !i8 {
         return self.nextInt(i8);
     }
 
-    fn nextUint16(self: *@This()) u16 {
+    fn nextUint16(self: *@This()) !u16 {
         return self.nextInt(u16);
     }
 
-    fn nextInt16(self: *@This()) i16 {
+    fn nextInt16(self: *@This()) !i16 {
         return self.nextInt(i16);
     }
 
-    fn nextUint24(self: *@This()) u24 {
+    fn nextUint24(self: *@This()) !u24 {
         return self.nextInt(u24);
     }
 
-    fn nextUint32(self: *@This()) u32 {
+    fn nextUint32(self: *@This()) !u32 {
         return self.nextInt(u32);
     }
 
-    fn nextInt32(self: *@This()) i32 {
+    fn nextInt32(self: *@This()) !i32 {
         return self.nextInt(i32);
     }
 
@@ -72,37 +77,41 @@ const Reader = struct {
 
     const nextF2DOT4 = nextInt16;
 
-    fn nextLONGDATETIME(self: *@This()) LONGDATETIME {
+    const nextFixed = nextInt32;
+
+    fn nextLONGDATETIME(self: *@This()) !LONGDATETIME {
         return self.nextInt(LONGDATETIME);
     }
 
-    fn nextTag(self: *@This()) Tag {
+    fn nextTag(self: *@This()) !Tag {
         return self.nextBytes(4);
     }
 
-    fn nextOffset16(self: *@This()) Offset16 {
-        const value = self.nextUint16();
+    fn nextOffset16(self: *@This()) !Offset16 {
+        const value = try self.nextUint16();
         return if (value != 0) value else null;
     }
 
-    fn nextOffset24(self: *@This()) Offset24 {
-        const value = self.nextUint24();
+    fn nextOffset24(self: *@This()) !Offset24 {
+        const value = try self.nextUint24();
         return if (value != 0) value else null;
     }
 
-    fn nextOffset32(self: *@This()) Offset32 {
-        const value = self.nextUint32();
+    fn nextOffset32(self: *@This()) !Offset32 {
+        const value = try self.nextUint32();
         return if (value != 0) value else null;
     }
 
     const nextVersion16Dot16 = nextUint32;
 
-    fn slice(self: *@This(), len: usize) @This() {
+    fn slice(self: *@This(), len: usize) !@This() {
+        if (self.source.len < len) return error.OutOfBounds;
         defer self.source = self.source[len..];
         return .{ .source = self.source[0..len] };
     }
 
-    fn limit(self: *@This(), len: usize) void {
+    fn limit(self: *@This(), len: usize) !void {
+        if (self.source.len < len) return error.OutOfBounds;
         self.source = self.source[0..len];
     }
 
@@ -119,6 +128,7 @@ const Font = struct {
     cmap: Cmap,
     cvt: []const FWORD,
     fpgm: []const u8,
+    head: Head,
     maxp: Maxp,
     prep: []const u8,
 
@@ -139,28 +149,30 @@ const Font = struct {
             start_glyph_id: u32,
         };
 
-        fn parse(comptime data: []const u8) @This() {
+        fn parse(comptime data: []const u8) !@This() {
             @setEvalBranchQuota(10000);
 
             var reader = Reader.init(data);
 
-            _ = reader.nextUint16(); // version
-            const num_tables = reader.nextUint16();
+            const version = try reader.nextUint16();
+            if (version != 0) return error.UnsupportedTableVersion;
+
+            const num_tables = try reader.nextUint16();
 
             var format_4_reader: ?Reader = null;
             var format_12_reader: ?Reader = null;
 
             for (0..num_tables) |_| {
-                const platform_id = reader.nextUint16();
-                const encoding_id = reader.nextUint16();
-                const subtable_offset = reader.nextUint32();
+                const platform_id = try reader.nextUint16();
+                const encoding_id = try reader.nextUint16();
+                const subtable_offset = try reader.nextUint32();
 
                 if (platform_id != 0) continue;
                 if (encoding_id != 3 and encoding_id != 4) continue;
 
                 var subtable_reader = Reader.init(data[subtable_offset..]);
 
-                const format = subtable_reader.nextUint16();
+                const format = try subtable_reader.nextUint16();
 
                 switch (format) {
                     4 => format_4_reader = subtable_reader,
@@ -170,52 +182,53 @@ const Font = struct {
             }
 
             if (format_12_reader) |*subtable_reader| {
-                _ = subtable_reader.nextUint16(); // reserved
-                _ = subtable_reader.nextUint32(); // length
-                _ = subtable_reader.nextUint32(); // language
-                const num_groups = subtable_reader.nextUint32();
+                _ = try subtable_reader.nextUint16(); // reserved
+                _ = try subtable_reader.nextUint32(); // length
+                _ = try subtable_reader.nextUint32(); // language
+                const num_groups = try subtable_reader.nextUint32();
 
                 var parsed_groups: [num_groups]SequentialMapGroup = undefined;
 
                 for (&parsed_groups) |*group| group.* = .{
-                    .start_char_code = reader.nextUint32(),
-                    .end_char_code = reader.nextUint32(),
-                    .start_glyph_id = reader.nextUint32(),
+                    .start_char_code = try reader.nextUint32(),
+                    .end_char_code = try reader.nextUint32(),
+                    .start_glyph_id = try reader.nextUint32(),
                 };
 
                 return comptime .{ .Format12 = &parsed_groups };
             }
 
             if (format_4_reader) |*subtable_reader| {
-                const length = subtable_reader.nextUint16();
-                subtable_reader.limit(length - 4);
+                const length = try subtable_reader.nextUint16();
+                try subtable_reader.limit(length - 4);
 
-                _ = subtable_reader.nextUint16(); // language
-                const seg_count_x2 = subtable_reader.nextUint16();
-                _ = subtable_reader.nextUint16(); // searchRange
-                _ = subtable_reader.nextUint16(); // entrySelector
-                _ = subtable_reader.nextUint16(); // rangeShift
-                var end_code_reader = subtable_reader.slice(seg_count_x2);
-                _ = subtable_reader.nextUint16(); // reservedPad
-                var start_code_reader = subtable_reader.slice(seg_count_x2);
-                var id_delta_reader = subtable_reader.slice(seg_count_x2);
-                var id_range_offsets_reader = subtable_reader.slice(seg_count_x2);
+                _ = try subtable_reader.nextUint16(); // language
+                const seg_count_x2 = try subtable_reader.nextUint16();
+                _ = try subtable_reader.nextUint16(); // searchRange
+                _ = try subtable_reader.nextUint16(); // entrySelector
+                _ = try subtable_reader.nextUint16(); // rangeShift
+                var end_code_reader = try subtable_reader.slice(seg_count_x2);
+                _ = try subtable_reader.nextUint16(); // reservedPad
+                var start_code_reader = try subtable_reader.slice(seg_count_x2);
+                var id_delta_reader = try subtable_reader.slice(seg_count_x2);
+                var id_range_offsets_reader = try subtable_reader.slice(seg_count_x2);
 
-                const seg_count = @divExact(seg_count_x2, 2);
+                const seg_count = try std.math.divExact(u16, seg_count_x2, 2);
                 var end_codes: [seg_count]u16 = undefined;
                 var start_codes: [seg_count]u16 = undefined;
                 var id_deltas: [seg_count]i16 = undefined;
                 var id_range_offsets: [seg_count]u16 = undefined;
 
                 for (0..seg_count) |i| {
-                    end_codes[i] = end_code_reader.nextUint16();
-                    start_codes[i] = start_code_reader.nextUint16();
-                    id_deltas[i] = id_delta_reader.nextInt16();
-                    id_range_offsets[i] = id_range_offsets_reader.nextUint16();
+                    end_codes[i] = try end_code_reader.nextUint16();
+                    start_codes[i] = try start_code_reader.nextUint16();
+                    id_deltas[i] = try id_delta_reader.nextInt16();
+                    id_range_offsets[i] = try id_range_offsets_reader.nextUint16();
                 }
 
-                var glyph_id_array: [@divExact(subtable_reader.remaining(), 2)]u16 = undefined;
-                for (&glyph_id_array) |*glyph_id| glyph_id.* = subtable_reader.nextUint16();
+                const glyph_id_array_len = try std.math.divExact(u16, subtable_reader.remaining(), 2);
+                var glyph_id_array: [glyph_id_array_len]u16 = undefined;
+                for (&glyph_id_array) |*glyph_id| glyph_id.* = try subtable_reader.nextUint16();
 
                 return comptime .{ .Format4 = .{
                     .end_codes = &end_codes,
@@ -225,7 +238,92 @@ const Font = struct {
                 } };
             }
 
-            unreachable;
+            return error.NoSupportedCmapEncoding;
+        }
+    };
+
+    const Head = struct {
+        font_revision: Fixed,
+        flags: Flags,
+        units_per_em: u16,
+        created: LONGDATETIME,
+        modified: LONGDATETIME,
+        x_min: i16,
+        y_min: i16,
+        x_max: i16,
+        y_max: i16,
+        mac_style: MacStyle,
+        lowest_rec_ppem: u16,
+        index_to_loc_format: IndexToLocFormat,
+
+        const Flags = packed struct(u16) {
+            baseline_at_y_0: bool,
+            left_sidebearing_at_x_0: bool,
+            instructions_depend_on_point_size: bool,
+            force_ppem_to_integer: bool,
+            instructions_alter_advance_width: bool,
+            _reserved0: u6,
+            losslessly_compressed: bool,
+            converted: bool,
+            optimized_for_cleartype: bool,
+            last_resort: bool,
+            _reserved1: u1,
+        };
+
+        const MacStyle = packed struct(u16) {
+            bold: bool,
+            italic: bool,
+            underline: bool,
+            outline: bool,
+            shadow: bool,
+            condensed: bool,
+            extended: bool,
+            _reserved: u9,
+        };
+
+        const IndexToLocFormat = enum(i16) {
+            Offset16 = 0,
+            Offset32 = 1,
+        };
+
+        fn parse(data: []const u8) !@This() {
+            var reader = Reader.init(data);
+
+            const major_version = try reader.nextUint16();
+            _ = try reader.nextUint16(); // minorVersion
+            if (major_version != 1) return error.UnsupportedTableVersion;
+            const font_revision = try reader.nextFixed();
+            _ = try reader.nextUint32(); // checksumAdjustment
+            _ = try reader.nextUint32(); // magicNumber
+            const flags = try reader.nextInt(Flags);
+            const units_per_em = try reader.nextUint16();
+            const created = try reader.nextLONGDATETIME();
+            const modified = try reader.nextLONGDATETIME();
+            const x_min = try reader.nextInt16();
+            const y_min = try reader.nextInt16();
+            const x_max = try reader.nextInt16();
+            const y_max = try reader.nextInt16();
+            const mac_style = try reader.nextInt(MacStyle);
+            const lowest_rec_ppem = try reader.nextUint16();
+            _ = try reader.nextInt16(); // fontDirectionHint
+            const index_to_loc_format = try reader.nextInt(IndexToLocFormat);
+            const glyph_data_format = try reader.nextInt16();
+            if (glyph_data_format != 0) return error.UnsupportedGlyphDataFormat;
+
+            return .{
+                .font_revision = font_revision,
+                .flags = flags,
+                .units_per_em = units_per_em,
+                .created = created,
+                .modified = modified,
+                .x_min = x_min,
+                .y_min = y_min,
+                .x_max = x_max,
+                .y_max = y_max,
+                .mac_style = mac_style,
+                .lowest_rec_ppem = lowest_rec_ppem,
+                .index_to_loc_format = index_to_loc_format,
+            };
         }
     };
 
@@ -245,30 +343,27 @@ const Font = struct {
         max_component_elements: u16,
         max_component_depth: u16,
 
-        fn parse(data: []const u8) @This() {
+        fn parse(data: []const u8) !@This() {
             var reader = Reader.init(data);
 
-            const version = reader.nextUint32();
-
-            if (version < 0x00010000) {
-                unreachable;
-            }
+            const version = try reader.nextUint32();
+            if (version < 0x00010000 or version >= 0x00020000) return error.UnsupportedTableVersion;
 
             return .{
-                .num_glyphs = reader.nextUint16(),
-                .max_points = reader.nextUint16(),
-                .max_contours = reader.nextUint16(),
-                .max_composite_points = reader.nextUint16(),
-                .max_composite_contours = reader.nextUint16(),
-                .max_zones = reader.nextUint16(),
-                .max_twilight_points = reader.nextUint16(),
-                .max_storage = reader.nextUint16(),
-                .max_function_defs = reader.nextUint16(),
-                .max_instruction_defs = reader.nextUint16(),
-                .max_stack_elements = reader.nextUint16(),
-                .max_size_of_instructions = reader.nextUint16(),
-                .max_component_elements = reader.nextUint16(),
-                .max_component_depth = reader.nextUint16(),
+                .num_glyphs = try reader.nextUint16(),
+                .max_points = try reader.nextUint16(),
+                .max_contours = try reader.nextUint16(),
+                .max_composite_points = try reader.nextUint16(),
+                .max_composite_contours = try reader.nextUint16(),
+                .max_zones = try reader.nextUint16(),
+                .max_twilight_points = try reader.nextUint16(),
+                .max_storage = try reader.nextUint16(),
+                .max_function_defs = try reader.nextUint16(),
+                .max_instruction_defs = try reader.nextUint16(),
+                .max_stack_elements = try reader.nextUint16(),
+                .max_size_of_instructions = try reader.nextUint16(),
+                .max_component_elements = try reader.nextUint16(),
+                .max_component_depth = try reader.nextUint16(),
             };
         }
     };
@@ -277,31 +372,34 @@ const Font = struct {
         cmap: ?[]const u8 = null,
         cvt: ?[]const u8 = null,
         fpgm: ?[]const u8 = null,
+        head: ?[]const u8 = null,
         maxp: ?[]const u8 = null,
         prep: ?[]const u8 = null,
 
-        fn parse(file_data: []const u8) @This() {
+        fn parse(file_data: []const u8) !@This() {
             var result: @This() = .{};
             var reader = Reader.init(file_data);
 
-            _ = reader.nextUint32(); // sfntVersion
-            const num_tables = reader.nextUint16();
-            _ = reader.nextUint16(); // searchRange
-            _ = reader.nextUint16(); // entrySelector
-            _ = reader.nextUint16(); // rangeShift
+            _ = try reader.nextUint32(); // sfntVersion
+            const num_tables = try reader.nextUint16();
+            _ = try reader.nextUint16(); // searchRange
+            _ = try reader.nextUint16(); // entrySelector
+            _ = try reader.nextUint16(); // rangeShift
 
             for (0..num_tables) |_| {
-                const tag = reader.nextTag();
-                _ = reader.nextUint32(); // checksum
-                const offset = reader.nextUint32();
-                const length = reader.nextUint32();
+                const tag = try reader.nextTag();
+                _ = try reader.nextUint32(); // checksum
+                const offset = try reader.nextUint32();
+                const length = try reader.nextUint32();
 
+                // FIXME: check bounds
                 const table_data = file_data[offset..][0..length];
 
                 switch (@bitCast(u32, tag)) {
                     @bitCast(u32, @as([4]u8, "cmap".*)) => result.cmap = table_data,
                     @bitCast(u32, @as([4]u8, "cvt ".*)) => result.cvt = table_data,
                     @bitCast(u32, @as([4]u8, "fpgm".*)) => result.fpgm = table_data,
+                    @bitCast(u32, @as([4]u8, "head".*)) => result.head = table_data,
                     @bitCast(u32, @as([4]u8, "maxp".*)) => result.maxp = table_data,
                     @bitCast(u32, @as([4]u8, "prep".*)) => result.prep = table_data,
                     else => {},
@@ -312,16 +410,16 @@ const Font = struct {
         }
     };
 
-    fn parse(comptime file_data: []const u8) @This() {
-        const directory = Directory.parse(file_data);
+    fn parse(comptime file_data: []const u8) !@This() {
+        const directory = try Directory.parse(file_data);
         return comptime .{
-            .cmap = Cmap.parse(directory.cmap.?),
+            .cmap = try Cmap.parse(directory.cmap orelse return error.MissingCmapTable),
 
             .cvt = blk: {
                 if (directory.cvt) |cvt_data| {
                     var reader = Reader.init(cvt_data);
-                    var values: [cvt_data.len / 2]FWORD = undefined;
-                    for (&values) |*v| v.* = reader.nextFWORD();
+                    var values: [cvt_data.len / 2]FWORD = undefined; // FIXME divExact
+                    for (&values) |*v| v.* = try reader.nextFWORD();
                     break :blk &values;
                 } else {
                     break :blk &.{};
@@ -330,7 +428,9 @@ const Font = struct {
 
             .fpgm = directory.fpgm orelse &.{},
 
-            .maxp = Maxp.parse(directory.maxp.?),
+            .head = try Head.parse(directory.head orelse return error.MissingHeadTable),
+
+            .maxp = try Maxp.parse(directory.maxp orelse return error.MissingMaxpTable),
 
             .prep = directory.prep orelse &.{},
         };
@@ -338,9 +438,6 @@ const Font = struct {
 };
 
 test "parse and dump test font" {
-    const font = comptime Font.parse(@embedFile("Roboto-Regular.ttf"));
-    std.debug.print(
-        "{s}",
-        .{try std.json.stringifyAlloc(std.heap.c_allocator, font, .{ .whitespace = .{} })},
-    );
+    const font = comptime Font.parse(@embedFile("Roboto-Regular.ttf")) catch unreachable;
+    std.debug.print("{}", .{font});
 }
