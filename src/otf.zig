@@ -117,9 +117,10 @@ const Reader = struct {
 
 const Font = struct {
     cmap: Cmap,
-    cvt: ?[]const FWORD,
-    fpgm: ?[]const u8,
+    cvt: []const FWORD,
+    fpgm: []const u8,
     maxp: Maxp,
+    prep: []const u8,
 
     const Cmap = union(enum) {
         Format4: Format4,
@@ -277,6 +278,7 @@ const Font = struct {
         cvt: ?[]const u8 = null,
         fpgm: ?[]const u8 = null,
         maxp: ?[]const u8 = null,
+        prep: ?[]const u8 = null,
 
         fn parse(file_data: []const u8) @This() {
             var result: @This() = .{};
@@ -301,6 +303,7 @@ const Font = struct {
                     @bitCast(u32, @as([4]u8, "cvt ".*)) => result.cvt = table_data,
                     @bitCast(u32, @as([4]u8, "fpgm".*)) => result.fpgm = table_data,
                     @bitCast(u32, @as([4]u8, "maxp".*)) => result.maxp = table_data,
+                    @bitCast(u32, @as([4]u8, "prep".*)) => result.prep = table_data,
                     else => {},
                 }
             }
@@ -321,13 +324,15 @@ const Font = struct {
                     for (&values) |*v| v.* = reader.nextFWORD();
                     break :blk &values;
                 } else {
-                    break :blk null;
+                    break :blk &.{};
                 }
             },
 
-            .fpgm = directory.fpgm,
+            .fpgm = directory.fpgm orelse &.{},
 
             .maxp = Maxp.parse(directory.maxp.?),
+
+            .prep = directory.prep orelse &.{},
         };
     }
 };
