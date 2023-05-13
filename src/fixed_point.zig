@@ -1,13 +1,8 @@
 const std = @import("std");
 
-pub fn Fixed(comptime Sig: type, comptime exp: comptime_int) type {
-    return struct {
+pub fn FixedPoint(comptime Sig: type, comptime exp: comptime_int) type {
+    return packed struct {
         significand: Sig,
-
-        const traits = Traits{
-            .significand = Sig,
-            .exponent = exp,
-        };
 
         pub inline fn fromLiteral(comptime value: anytype) @This() {
             return .{
@@ -46,29 +41,4 @@ pub fn Fixed(comptime Sig: type, comptime exp: comptime_int) type {
             };
         }
     };
-}
-
-const Traits = struct {
-    significand: type,
-    exponent: comptime_int,
-};
-
-pub fn isFixed(comptime T: type) bool {
-    return comptime @hasDecl(T, "traits") and @TypeOf(T.traits) != Traits;
-}
-
-fn checkIsFixed(comptime T: type) void {
-    if (comptime !isFixed(T)) {
-        @compileError("The type '" ++ @typeName(T) ++ "' is not a Fixed(...) type");
-    }
-}
-
-pub fn Significand(comptime T: type) type {
-    checkIsFixed(T);
-    return T.traits.significand;
-}
-
-pub fn exponent(comptime T: type) comptime_int {
-    checkIsFixed(T);
-    return comptime T.traits.exponent;
 }
