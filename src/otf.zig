@@ -2,16 +2,17 @@ const std = @import("std");
 
 const FixedPoint = @import("fixed_point.zig").FixedPoint;
 
-pub const Tag = [4]u8;
-pub const Offset16 = ?u16;
-pub const Offset24 = ?u24;
-pub const Offset32 = ?u32;
-pub const Fixed = i32;
-pub const FWORD = i16;
-pub const UFWORD = u16;
-pub const F2DOT14 = FixedPoint(i16, -14);
-pub const LONGDATETIME = i64;
-pub const Version16Dot16 = u32;
+const Tag = [4]u8;
+const Offset16 = ?u16;
+const Offset24 = ?u24;
+const Offset32 = ?u32;
+const Fixed = i32;
+const FWORD = i16;
+const UFWORD = u16;
+const F2Dot14 = FixedPoint(i16, -14);
+const LONGDATETIME = i64;
+const Version16Dot16 = u32;
+const F26Dot6 = FixedPoint(i32, -6);
 
 const Reader = struct {
     source: []const u8,
@@ -81,8 +82,8 @@ const Reader = struct {
 
     const nextUFWORD = nextUint16;
 
-    fn nextF2DOT14(self: *@This()) F2DOT14 {
-        return self.nextInt(F2DOT14);
+    fn nextF2DOT14(self: *@This()) F2Dot14 {
+        return self.nextInt(F2Dot14);
     }
 
     const nextFixed = nextInt32;
@@ -700,7 +701,7 @@ const Glyf = struct {
                 const Component = struct {
                     glyph_index: u16,
                     position: Position,
-                    rotation_and_scale: [2][2]F2DOT14,
+                    rotation_and_scale: [2][2]F2Dot14,
 
                     const Position = union(enum) {
                         Offset: Offset,
@@ -795,15 +796,15 @@ const Glyf = struct {
                             if (flags.we_have_a_scale) {
                                 const scale = reader.nextF2DOT14();
                                 break :blk .{
-                                    .{ scale, F2DOT14.fromLiteral(0) },
-                                    .{ F2DOT14.fromLiteral(0), scale },
+                                    .{ scale, F2Dot14.init(0) },
+                                    .{ F2Dot14.init(0), scale },
                                 };
                             }
 
                             if (flags.we_have_an_x_and_y_scale) {
                                 break :blk .{
-                                    .{ reader.nextF2DOT14(), F2DOT14.fromLiteral(0) },
-                                    .{ F2DOT14.fromLiteral(0), reader.nextF2DOT14() },
+                                    .{ reader.nextF2DOT14(), F2Dot14.init(0) },
+                                    .{ F2Dot14.init(0), reader.nextF2DOT14() },
                                 };
                             }
 
