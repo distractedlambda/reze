@@ -176,8 +176,6 @@ const Cmap = union(enum) {
     };
 
     fn parse(comptime data: []const u8) !@This() {
-        @setEvalBranchQuota(10000);
-
         var reader = Reader.init(data);
 
         const version = reader.nextUint16();
@@ -527,8 +525,8 @@ const Loca = struct {
 };
 
 const Glyf = struct {
-    fn parse(comptime data: []const u8, comptime loca: []const u32, comptime max_composite_components: usize) []const Glyph {
-        var glyphs: [loca.len - 1]Glyph = undefined;
+    fn parse(comptime data: []const u8, comptime loca: []const u32, comptime max_composite_components: usize) []const ?Glyph {
+        var glyphs: [loca.len - 1]?Glyph = undefined;
         for (&glyphs, 0..) |*glyph, i| glyph.* = Glyph.parse(data[loca[i]..loca[i + 1]], max_composite_components);
         return comptime &glyphs;
     }
@@ -541,7 +539,9 @@ const Glyf = struct {
         instructions: []const u8,
         geometry: Geometry,
 
-        fn parse(comptime data: []const u8, comptime max_composite_components: usize) @This() {
+        fn parse(comptime data: []const u8, comptime max_composite_components: usize) ?@This() {
+            if (data.len == 0) return null;
+
             var reader = Reader.init(data);
             const number_of_contours = reader.nextInt16();
             const x_min = reader.nextInt16();
@@ -611,10 +611,16 @@ const Glyf = struct {
                     var x_coordinates_size: usize = 0;
                     const flags_size = blk: {
                         var flags_reader = reader;
-                        var flags = flags_reader.nextInt(Flags);
+                        var flags: Flags = undefined;
                         var remaining_repeats: u8 = 0;
 
                         for (0..num_points) |_| {
+                            if (remaining_repeats != 0) {
+                                remaining_repeats -= 1;
+                            } else {
+                                flags = flags_reader.nextInt(Flags);
+                            }
+
                             if (flags.x_short_vector) {
                                 x_coordinates_size += 1;
                             } else if (!flags.x_is_same_or_positive_x_short_vector) {
@@ -625,12 +631,6 @@ const Glyf = struct {
                                 remaining_repeats = flags_reader.nextUint8();
                                 flags.repeat_flag = false;
                             }
-
-                            if (remaining_repeats != 0) {
-                                remaining_repeats -= 1;
-                            } else {
-                                flags = flags_reader.nextInt(Flags);
-                            }
                         }
 
                         break :blk reader.remaining() - flags_reader.remaining();
@@ -640,11 +640,17 @@ const Glyf = struct {
                     var x_coordinates_reader = reader.slice(x_coordinates_size);
                     var y_coordinates_reader = reader;
 
-                    var flags = flags_reader.nextInt(Flags);
+                    var flags: Flags = undefined;
                     var remaining_repeats: u8 = 0;
                     var x: i16 = 0;
                     var y: i16 = 0;
                     for (&points) |*point| {
+                        if (remaining_repeats != 0) {
+                            remaining_repeats -= 1;
+                        } else {
+                            flags = flags_reader.nextInt(Flags);
+                        }
+
                         if (flags.x_short_vector) {
                             const dx = x_coordinates_reader.nextUint8();
                             if (flags.x_is_same_or_positive_x_short_vector) {
@@ -674,12 +680,6 @@ const Glyf = struct {
                         if (flags.repeat_flag) {
                             remaining_repeats = flags_reader.nextUint8();
                             flags.repeat_flag = false;
-                        }
-
-                        if (remaining_repeats != 0) {
-                            remaining_repeats -= 1;
-                        } else {
-                            flags = flags_reader.nextInt(Flags);
                         }
                     }
 
@@ -842,15 +842,16 @@ const Glyf = struct {
 };
 
 test "parse font" {
+    @setEvalBranchQuota(250000);
     const font_data = @embedFile("Roboto-Regular.ttf");
     const directory = try comptime Directory.extract(font_data);
     const cmap = try comptime Cmap.parse(directory.tableData("cmap").?);
-    const cvt = try comptime Cvt.parse(directory.tableData("cvt ").?);
+    const cvt = comptime Cvt.parse(directory.tableData("cvt ").?);
     const head = try comptime Head.parse(directory.tableData("head").?);
     const hhea = try Hhea.parse(directory.tableData("hhea").?);
     const maxp = try comptime Maxp.parse(directory.tableData("maxp").?);
-    const loca = try Loca.parse(directory.tableData("loca").?, maxp.num_glyphs, head.index_to_loc_format);
-    const glyf = Glyf.parse(directory.tableData("glyf").?, loca, maxp.max_component_elements);
+    const loca = comptime Loca.parse(directory.tableData("loca").?, maxp.num_glyphs, head.index_to_loc_format);
+    const glyf = comptime Glyf.parse(directory.tableData("glyf").?, loca, maxp.max_component_elements);
     std.debug.print(
         "\ncmap: {any}\ncvt: {any}\nhead: {any}\nhhea: {any}\nmaxp: {any}\nloca: {any}\nglyf: {any}\n",
         .{ cmap, cvt, head, hhea, maxp, loca, glyf },
