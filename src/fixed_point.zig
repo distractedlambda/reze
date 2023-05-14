@@ -46,17 +46,13 @@ pub fn FixedPoint(comptime Significand_: type, comptime exponent_: comptime_int)
                         @compileError("Source value is not finite");
                     }
 
-                    const f128_bits = @bitCast(u128, f128_value);
-                    const f128_stored_exp = @as(comptime_int, @truncate(u15, f128_bits >> 112));
-                    const f128_mant = @as(comptime_int, @truncate(u112, f128_bits));
-                    const f128_sign = if (f128_bits >> 127 != 0) -1 else 1;
-                    const f128_sig = f128_sign * (f128_mant + (if (f128_stored_exp != 0) 1 << 112 else 0));
-                    const eff_exp = (if (f128_stored_exp == 0) -16494 else f128_stored_exp - 16495) - exponent;
+                    const f128_fields = @bitCast(F128Fields, f128_value);
+                    const effective_exponent = f128_fields.trueExponent() - exponent;
 
-                    break :blk if (eff_exp >= 0)
-                        f128_sig << eff_exp
+                    break :blk if (effective_exponent >= 0)
+                        f128_fields.trueSignificand() << effective_exponent
                     else
-                        @divExact(f128_sig, 1 << -eff_exp);
+                        @divExact(f128_fields.trueSignificand(), 1 << -effective_exponent);
                 },
 
                 else => blk: {
@@ -85,6 +81,75 @@ pub fn FixedPoint(comptime Significand_: type, comptime exponent_: comptime_int)
     };
 }
 
+const F128Fields = packed struct(u128) {
+    fraction: u112,
+    exponent: u15,
+    negative: bool,
+
+    fn isSubnormal(self: @This()) bool {
+        return self.exponent == 0;
+    }
+
+    fn trueSignificand(self: @This()) i114 {
+        var result: i114 = self.fraction;
+        if (!self.isSubnormal()) result |= (1 << 112);
+        if (self.negative) result = -result;
+        return result;
+    }
+
+    fn trueExponent(self: @This()) i16 {
+        return if (self.isSubnormal())
+            -16494
+        else
+            @as(i16, self.exponent) - 16495;
+    }
+};
+
 pub fn isFixedPoint(comptime T: type) bool {
     return @hasDecl(T, "marker") and @TypeOf(T.marker) == Marker;
+}
+
+pub fn init(value: anytype) switch (@typeInfo(@TypeOf(value))) {
+    .Int => FixedPoint(@TypeOf(value), 0),
+
+    .ComptimeInt => FixedPoint(std.math.IntFittingRange(value, value), 0),
+
+    .ComptimeFloat => blk: {
+        const f128_value = @as(f128, value);
+
+        if (!std.math.isFinite(f128_value)) {
+            @compileError("Source value is not finite");
+        }
+
+        if (f128_value == 0) {
+            break :blk FixedPoint(u0, 0);
+        }
+
+        const f128_fields = @bitCast(F128Fields, f128_value);
+        const exponent_adjustment = @ctz(f128_fields.trueSignificand());
+        const trimmed_significand = f128_fields.trueSignificand() >> exponent_adjustment;
+
+        break :blk FixedPoint(
+            std.math.IntFittingRange(trimmed_significand, trimmed_significand),
+            f128_fields.trueExponent() + exponent_adjustment,
+        );
+    },
+
+    else => if (isFixedPoint(@TypeOf(value)))
+        @TypeOf(value)
+    else
+        @compileError("Unsupported type: " ++ @typeName(@TypeOf(value))),
+} {
+    return switch (@typeInfo(@TypeOf(value))) {
+        .Int, .ComptimeInt => .{ .significand = value },
+
+        .ComptimeFloat => comptime blk: {
+            const f128_fields = @bitCast(F128Fields, @as(f128, value));
+            const exponent_adjustment = @ctz(f128_fields.trueSignificand());
+            const trimmed_significand = @as(comptime_int, f128_fields.trueSignificand() >> exponent_adjustment);
+            break :blk .{ .significand = trimmed_significand };
+        },
+
+        else => value,
+    };
 }
