@@ -1,18 +1,6 @@
 const std = @import("std");
 
-const FixedPoint = @import("fixed_point.zig").FixedPoint;
-
 const Tag = [4]u8;
-const Offset16 = ?u16;
-const Offset24 = ?u24;
-const Offset32 = ?u32;
-const Fixed = i32;
-const FWORD = i16;
-const UFWORD = u16;
-const F2Dot14 = FixedPoint(i16, -14);
-const LONGDATETIME = i64;
-const Version16Dot16 = u32;
-const F26Dot6 = FixedPoint(i32, -6);
 
 const Reader = struct {
     source: []const u8,
@@ -50,53 +38,9 @@ const Reader = struct {
         }
     }
 
-    fn nextUint8(self: *@This()) u8 {
-        return self.nextInt(u8);
-    }
-
-    fn nextInt8(self: *@This()) i8 {
-        return self.nextInt(i8);
-    }
-
-    fn nextUint16(self: *@This()) u16 {
-        return self.nextInt(u16);
-    }
-
-    fn nextInt16(self: *@This()) i16 {
-        return self.nextInt(i16);
-    }
-
-    fn nextUint24(self: *@This()) u24 {
-        return self.nextInt(u24);
-    }
-
-    fn nextUint32(self: *@This()) u32 {
-        return self.nextInt(u32);
-    }
-
-    fn nextInt32(self: *@This()) i32 {
-        return self.nextInt(i32);
-    }
-
-    const nextFWORD = nextInt16;
-
-    const nextUFWORD = nextUint16;
-
-    fn nextF2DOT14(self: *@This()) F2Dot14 {
-        return self.nextInt(F2Dot14);
-    }
-
-    const nextFixed = nextInt32;
-
-    fn nextLONGDATETIME(self: *@This()) LONGDATETIME {
-        return self.nextInt(LONGDATETIME);
-    }
-
     fn nextTag(self: *@This()) Tag {
         return self.nextBytes(4);
     }
-
-    const nextVersion16Dot16 = nextUint32;
 
     fn slice(self: *@This(), len: usize) @This() {
         defer self.source = self.source[len..];
@@ -127,20 +71,20 @@ const Directory = struct {
     fn extract(comptime font_data: []const u8) !@This() {
         var reader = Reader.init(font_data);
 
-        const sfnt_version = reader.nextUint32();
+        const sfnt_version = reader.nextInt(u32);
         if (sfnt_version != 0x00010000) return error.UnsupportedSfntVersion;
-        const num_tables = reader.nextUint16();
-        _ = reader.nextUint16(); // searchRange
-        _ = reader.nextUint16(); // entrySelector
-        _ = reader.nextUint16(); // rangeShift
+        const num_tables = reader.nextInt(u16);
+        _ = reader.nextInt(u16); // searchRange
+        _ = reader.nextInt(u16); // entrySelector
+        _ = reader.nextInt(u16); // rangeShift
 
         var entries: [num_tables]Entry = undefined;
 
         for (&entries) |*entry| {
             const tag = reader.nextTag();
-            _ = reader.nextUint32(); // checksum
-            const offset = reader.nextUint32();
-            const length = reader.nextUint32();
+            _ = reader.nextInt(u32); // checksum
+            const offset = reader.nextInt(u32);
+            const length = reader.nextInt(u32);
             if (offset > font_data.len or font_data.len - offset < length) return error.OutOfBounds;
             entry.* = .{ .tag = tag, .table_data = font_data[offset..][0..length] };
         }
@@ -179,25 +123,25 @@ const Cmap = union(enum) {
     fn parse(comptime data: []const u8) !@This() {
         var reader = Reader.init(data);
 
-        const version = reader.nextUint16();
+        const version = reader.nextInt(u16);
         if (version != 0) return error.UnsupportedTableVersion;
 
-        const num_tables = reader.nextUint16();
+        const num_tables = reader.nextInt(u16);
 
         var format_4_reader: ?Reader = null;
         var format_12_reader: ?Reader = null;
 
         for (0..num_tables) |_| {
-            const platform_id = reader.nextUint16();
-            const encoding_id = reader.nextUint16();
-            const subtable_offset = reader.nextUint32();
+            const platform_id = reader.nextInt(u16);
+            const encoding_id = reader.nextInt(u16);
+            const subtable_offset = reader.nextInt(u32);
 
             if (platform_id != 0) continue;
             if (encoding_id != 3 and encoding_id != 4) continue;
 
             var subtable_reader = Reader.init(data[subtable_offset..]);
 
-            const format = subtable_reader.nextUint16();
+            const format = subtable_reader.nextInt(u16);
 
             switch (format) {
                 4 => format_4_reader = subtable_reader,
@@ -207,33 +151,33 @@ const Cmap = union(enum) {
         }
 
         if (format_12_reader) |*subtable_reader| {
-            _ = subtable_reader.nextUint16(); // reserved
-            _ = subtable_reader.nextUint32(); // length
-            _ = subtable_reader.nextUint32(); // language
-            const num_groups = subtable_reader.nextUint32();
+            _ = subtable_reader.nextInt(u16); // reserved
+            _ = subtable_reader.nextInt(u32); // length
+            _ = subtable_reader.nextInt(u32); // language
+            const num_groups = subtable_reader.nextInt(u32);
 
             var parsed_groups: [num_groups]SequentialMapGroup = undefined;
 
             for (&parsed_groups) |*group| group.* = .{
-                .start_char_code = reader.nextUint32(),
-                .end_char_code = reader.nextUint32(),
-                .start_glyph_id = reader.nextUint32(),
+                .start_char_code = reader.nextInt(u32),
+                .end_char_code = reader.nextInt(u32),
+                .start_glyph_id = reader.nextInt(u32),
             };
 
             return comptime .{ .Format12 = &parsed_groups };
         }
 
         if (format_4_reader) |*subtable_reader| {
-            const length = subtable_reader.nextUint16();
+            const length = subtable_reader.nextInt(u16);
             subtable_reader.limit(length - 4);
 
-            _ = subtable_reader.nextUint16(); // language
-            const seg_count_x2 = subtable_reader.nextUint16();
-            _ = subtable_reader.nextUint16(); // searchRange
-            _ = subtable_reader.nextUint16(); // entrySelector
-            _ = subtable_reader.nextUint16(); // rangeShift
+            _ = subtable_reader.nextInt(u16); // language
+            const seg_count_x2 = subtable_reader.nextInt(u16);
+            _ = subtable_reader.nextInt(u16); // searchRange
+            _ = subtable_reader.nextInt(u16); // entrySelector
+            _ = subtable_reader.nextInt(u16); // rangeShift
             var end_code_reader = subtable_reader.slice(seg_count_x2);
-            _ = subtable_reader.nextUint16(); // reservedPad
+            _ = subtable_reader.nextInt(u16); // reservedPad
             var start_code_reader = subtable_reader.slice(seg_count_x2);
             var id_delta_reader = subtable_reader.slice(seg_count_x2);
             var id_range_offsets_reader = subtable_reader.slice(seg_count_x2);
@@ -245,14 +189,14 @@ const Cmap = union(enum) {
             var id_range_offsets: [seg_count]u16 = undefined;
 
             for (0..seg_count) |i| {
-                end_codes[i] = end_code_reader.nextUint16();
-                start_codes[i] = start_code_reader.nextUint16();
-                id_deltas[i] = id_delta_reader.nextInt16();
-                id_range_offsets[i] = id_range_offsets_reader.nextUint16();
+                end_codes[i] = end_code_reader.nextInt(u16);
+                start_codes[i] = start_code_reader.nextInt(u16);
+                id_deltas[i] = id_delta_reader.nextInt(i16);
+                id_range_offsets[i] = id_range_offsets_reader.nextInt(u16);
             }
 
             var glyph_id_array: [@divExact(subtable_reader.remaining(), 2)]u16 = undefined;
-            for (&glyph_id_array) |*glyph_id| glyph_id.* = subtable_reader.nextUint16();
+            for (&glyph_id_array) |*glyph_id| glyph_id.* = subtable_reader.nextInt(u16);
 
             return comptime .{ .Format4 = .{
                 .end_codes = &end_codes,
@@ -267,11 +211,11 @@ const Cmap = union(enum) {
 };
 
 const Head = struct {
-    font_revision: Fixed,
+    font_revision: i32,
     flags: Flags,
     units_per_em: u16,
-    created: LONGDATETIME,
-    modified: LONGDATETIME,
+    created: i64,
+    modified: i64,
     x_min: i16,
     y_min: i16,
     x_max: i16,
@@ -313,25 +257,25 @@ const Head = struct {
     fn parse(data: []const u8) !@This() {
         var reader = Reader.init(data);
 
-        const major_version = reader.nextUint16();
-        _ = reader.nextUint16(); // minorVersion
+        const major_version = reader.nextInt(u16);
+        _ = reader.nextInt(u16); // minorVersion
         if (major_version != 1) return error.UnsupportedTableVersion;
-        const font_revision = reader.nextFixed();
-        _ = reader.nextUint32(); // checksumAdjustment
-        _ = reader.nextUint32(); // magicNumber
+        const font_revision = reader.nextInt(i32);
+        _ = reader.nextInt(u32); // checksumAdjustment
+        _ = reader.nextInt(u32); // magicNumber
         const flags = reader.nextInt(Flags);
-        const units_per_em = reader.nextUint16();
-        const created = reader.nextLONGDATETIME();
-        const modified = reader.nextLONGDATETIME();
-        const x_min = reader.nextInt16();
-        const y_min = reader.nextInt16();
-        const x_max = reader.nextInt16();
-        const y_max = reader.nextInt16();
+        const units_per_em = reader.nextInt(u16);
+        const created = reader.nextInt(i64);
+        const modified = reader.nextInt(i64);
+        const x_min = reader.nextInt(i16);
+        const y_min = reader.nextInt(i16);
+        const x_max = reader.nextInt(i16);
+        const y_max = reader.nextInt(i16);
         const mac_style = reader.nextInt(MacStyle);
-        const lowest_rec_ppem = reader.nextUint16();
-        _ = reader.nextInt16(); // fontDirectionHint
+        const lowest_rec_ppem = reader.nextInt(u16);
+        _ = reader.nextInt(i16); // fontDirectionHint
         const index_to_loc_format = reader.nextInt(IndexToLocFormat);
-        const glyph_data_format = reader.nextInt16();
+        const glyph_data_format = reader.nextInt(i16);
         if (glyph_data_format != 0) return error.UnsupportedGlyphDataFormat;
 
         return .{
@@ -352,13 +296,13 @@ const Head = struct {
 };
 
 const Hhea = struct {
-    ascender: FWORD,
-    descender: FWORD,
-    line_gap: FWORD,
-    advance_width_max: UFWORD,
-    min_left_side_bearing: FWORD,
-    min_right_side_bearing: FWORD,
-    x_max_extent: FWORD,
+    ascender: i16,
+    descender: i16,
+    line_gap: i16,
+    advance_width_max: u16,
+    min_left_side_bearing: i16,
+    min_right_side_bearing: i16,
+    x_max_extent: i16,
     caret_slope_rise: i16,
     caret_slope_run: i16,
     caret_offset: i16,
@@ -366,26 +310,26 @@ const Hhea = struct {
 
     fn parse(data: []const u8) !@This() {
         var reader = Reader.init(data);
-        const major_version = reader.nextUint16();
+        const major_version = reader.nextInt(u16);
         if (major_version != 1) return error.UnsupportedTableVersion;
-        _ = reader.nextUint16(); // minorVersion
-        const ascender = reader.nextFWORD();
-        const descender = reader.nextFWORD();
-        const line_gap = reader.nextFWORD();
-        const advance_width_max = reader.nextUFWORD();
-        const min_left_side_bearing = reader.nextFWORD();
-        const min_right_side_bearing = reader.nextFWORD();
-        const x_max_extent = reader.nextFWORD();
-        const caret_slope_rise = reader.nextInt16();
-        const caret_slope_run = reader.nextInt16();
-        const caret_offset = reader.nextInt16();
-        _ = reader.nextInt16(); // reserved
-        _ = reader.nextInt16(); // reserved
-        _ = reader.nextInt16(); // reserved
-        _ = reader.nextInt16(); // reserved
-        const metric_data_format = reader.nextInt16();
+        _ = reader.nextInt(u16); // minorVersion
+        const ascender = reader.nextInt(i16);
+        const descender = reader.nextInt(i16);
+        const line_gap = reader.nextInt(i16);
+        const advance_width_max = reader.nextInt(u16);
+        const min_left_side_bearing = reader.nextInt(i16);
+        const min_right_side_bearing = reader.nextInt(i16);
+        const x_max_extent = reader.nextInt(i16);
+        const caret_slope_rise = reader.nextInt(i16);
+        const caret_slope_run = reader.nextInt(i16);
+        const caret_offset = reader.nextInt(i16);
+        _ = reader.nextInt(i16); // reserved
+        _ = reader.nextInt(i16); // reserved
+        _ = reader.nextInt(i16); // reserved
+        _ = reader.nextInt(i16); // reserved
+        const metric_data_format = reader.nextInt(i16);
         if (metric_data_format != 0) return error.UnsupportedMetricDataFormat;
-        const number_of_h_metrics = reader.nextUint16();
+        const number_of_h_metrics = reader.nextInt(u16);
         return .{
             .ascender = ascender,
             .descender = descender,
@@ -421,24 +365,24 @@ const Maxp = struct {
     fn parse(data: []const u8) !@This() {
         var reader = Reader.init(data);
 
-        const version = reader.nextUint32();
+        const version = reader.nextInt(u32);
         if (version < 0x00010000 or version >= 0x00020000) return error.UnsupportedTableVersion;
 
         return .{
-            .num_glyphs = reader.nextUint16(),
-            .max_points = reader.nextUint16(),
-            .max_contours = reader.nextUint16(),
-            .max_composite_points = reader.nextUint16(),
-            .max_composite_contours = reader.nextUint16(),
-            .max_zones = reader.nextUint16(),
-            .max_twilight_points = reader.nextUint16(),
-            .max_storage = reader.nextUint16(),
-            .max_function_defs = reader.nextUint16(),
-            .max_instruction_defs = reader.nextUint16(),
-            .max_stack_elements = reader.nextUint16(),
-            .max_size_of_instructions = reader.nextUint16(),
-            .max_component_elements = reader.nextUint16(),
-            .max_component_depth = reader.nextUint16(),
+            .num_glyphs = reader.nextInt(u16),
+            .max_points = reader.nextInt(u16),
+            .max_contours = reader.nextInt(u16),
+            .max_composite_points = reader.nextInt(u16),
+            .max_composite_contours = reader.nextInt(u16),
+            .max_zones = reader.nextInt(u16),
+            .max_twilight_points = reader.nextInt(u16),
+            .max_storage = reader.nextInt(u16),
+            .max_function_defs = reader.nextInt(u16),
+            .max_instruction_defs = reader.nextInt(u16),
+            .max_stack_elements = reader.nextInt(u16),
+            .max_size_of_instructions = reader.nextInt(u16),
+            .max_component_elements = reader.nextInt(u16),
+            .max_component_depth = reader.nextInt(u16),
         };
     }
 };
@@ -460,23 +404,23 @@ const Vhea = struct {
         var reader = Reader.init(data);
         const version = reader.nextVersion16Dot16();
         if (version < 0x00010000 or version >= 0x00020000) return error.UnsupportedTableVersion;
-        const vert_typo_ascender = reader.nextInt16();
-        const vert_typo_descender = reader.nextInt16();
-        const vert_typo_line_gap = reader.nextInt16();
-        const advance_height_max = reader.nextInt16();
-        const min_top_side_bearing = reader.nextInt16();
-        const min_bottom_side_bearing = reader.nextInt16();
-        const y_max_extent = reader.nextInt16();
-        const caret_slope_rise = reader.nextInt16();
-        const caret_slope_run = reader.nextInt16();
-        const caret_offset = reader.nextInt16();
-        _ = reader.nextInt16(); // reserved
-        _ = reader.nextInt16(); // reserved
-        _ = reader.nextInt16(); // reserved
-        _ = reader.nextInt16(); // reserved
-        const metric_data_format = reader.nextInt16();
+        const vert_typo_ascender = reader.nextInt(i16);
+        const vert_typo_descender = reader.nextInt(i16);
+        const vert_typo_line_gap = reader.nextInt(i16);
+        const advance_height_max = reader.nextInt(i16);
+        const min_top_side_bearing = reader.nextInt(i16);
+        const min_bottom_side_bearing = reader.nextInt(i16);
+        const y_max_extent = reader.nextInt(i16);
+        const caret_slope_rise = reader.nextInt(i16);
+        const caret_slope_run = reader.nextInt(i16);
+        const caret_offset = reader.nextInt(i16);
+        _ = reader.nextInt(i16); // reserved
+        _ = reader.nextInt(i16); // reserved
+        _ = reader.nextInt(i16); // reserved
+        _ = reader.nextInt(i16); // reserved
+        const metric_data_format = reader.nextInt(i16);
         if (metric_data_format != 0) return error.UnsupportedMetricDataFormat;
-        const num_of_long_ver_metrics = reader.nextUint16();
+        const num_of_long_ver_metrics = reader.nextInt(u16);
         return .{
             .vert_typo_ascender = vert_typo_ascender,
             .vert_typo_descender = vert_typo_descender,
@@ -494,10 +438,10 @@ const Vhea = struct {
 };
 
 const Cvt = struct {
-    fn parse(comptime data: []const u8) []const FWORD {
+    fn parse(comptime data: []const u8) []const i16 {
         var reader = Reader.init(data);
-        var values: [@divExact(data.len, 2)]FWORD = undefined;
-        for (&values) |*v| v.* = reader.nextFWORD();
+        var values: [@divExact(data.len, 2)]i16 = undefined;
+        for (&values) |*v| v.* = reader.nextInt(i16);
         return comptime &values;
     }
 };
@@ -513,11 +457,11 @@ const Loca = struct {
 
         switch (index_to_loc_format) {
             .Offset16 => {
-                for (&offsets) |*e| e.* = @as(u32, reader.nextUint16()) * 2;
+                for (&offsets) |*e| e.* = @as(u32, reader.nextInt(u16)) * 2;
             },
 
             .Offset32 => {
-                for (&offsets) |*e| e.* = reader.nextUint32();
+                for (&offsets) |*e| e.* = reader.nextInt(u32);
             },
         }
 
@@ -544,11 +488,11 @@ const Glyf = struct {
             if (data.len == 0) return null;
 
             var reader = Reader.init(data);
-            const number_of_contours = reader.nextInt16();
-            const x_min = reader.nextInt16();
-            const y_min = reader.nextInt16();
-            const x_max = reader.nextInt16();
-            const y_max = reader.nextInt16();
+            const number_of_contours = reader.nextInt(i16);
+            const x_min = reader.nextInt(i16);
+            const y_min = reader.nextInt(i16);
+            const x_max = reader.nextInt(i16);
+            const y_max = reader.nextInt(i16);
             const geometry_with_instructions = Geometry.parse(reader.source, number_of_contours, max_composite_components);
             return .{
                 .x_min = x_min,
@@ -601,12 +545,12 @@ const Glyf = struct {
                     var reader = Reader.init(data);
 
                     var end_point_indices: [number_of_contours]u16 = undefined;
-                    for (&end_point_indices) |*ep| ep.* = reader.nextUint16();
+                    for (&end_point_indices) |*ep| ep.* = reader.nextInt(u16);
 
                     const num_points = @as(usize, end_point_indices[number_of_contours - 1]) + 1;
                     var points: [num_points]Point = undefined;
 
-                    const instruction_length = reader.nextUint16();
+                    const instruction_length = reader.nextInt(u16);
                     const instructions = reader.nextSlice(instruction_length);
 
                     var x_coordinates_size: usize = 0;
@@ -629,7 +573,7 @@ const Glyf = struct {
                             }
 
                             if (flags.repeat_flag) {
-                                remaining_repeats = flags_reader.nextUint8();
+                                remaining_repeats = flags_reader.nextInt(u8);
                                 flags.repeat_flag = false;
                             }
                         }
@@ -653,25 +597,25 @@ const Glyf = struct {
                         }
 
                         if (flags.x_short_vector) {
-                            const dx = x_coordinates_reader.nextUint8();
+                            const dx = x_coordinates_reader.nextInt(u8);
                             if (flags.x_is_same_or_positive_x_short_vector) {
                                 x += dx;
                             } else {
                                 x -= dx;
                             }
                         } else if (!flags.x_is_same_or_positive_x_short_vector) {
-                            x += x_coordinates_reader.nextInt16();
+                            x += x_coordinates_reader.nextInt(i16);
                         }
 
                         if (flags.y_short_vector) {
-                            const dy = y_coordinates_reader.nextUint8();
+                            const dy = y_coordinates_reader.nextInt(u8);
                             if (flags.y_is_same_or_positive_y_short_vector) {
                                 y += dy;
                             } else {
                                 y -= dy;
                             }
                         } else if (!flags.y_is_same_or_positive_y_short_vector) {
-                            y += y_coordinates_reader.nextInt16();
+                            y += y_coordinates_reader.nextInt(i16);
                         }
 
                         point.x = x;
@@ -679,7 +623,7 @@ const Glyf = struct {
                         point.on_curve = flags.on_curve_point;
 
                         if (flags.repeat_flag) {
-                            remaining_repeats = flags_reader.nextUint8();
+                            remaining_repeats = flags_reader.nextInt(u8);
                             flags.repeat_flag = false;
                         }
                     }
@@ -701,7 +645,7 @@ const Glyf = struct {
                 const Component = struct {
                     glyph_index: u16,
                     position: Position,
-                    rotation_and_scale: [2][2]F2Dot14,
+                    rotation_and_scale: [2][2]i16,
 
                     const Position = union(enum) {
                         Offset: Offset,
@@ -752,7 +696,7 @@ const Glyf = struct {
                     const num_components = for (&components, 0..) |*component, i| {
                         const flags = reader.nextInt(Flags);
 
-                        component.glyph_index = reader.nextUint16();
+                        component.glyph_index = reader.nextInt(u16);
 
                         component.position = blk: {
                             if (flags.args_are_xy_values) {
@@ -760,11 +704,11 @@ const Glyf = struct {
                                 var y: i16 = undefined;
 
                                 if (flags.arg_1_and_2_are_words) {
-                                    x = reader.nextInt16();
-                                    y = reader.nextInt16();
+                                    x = reader.nextInt(i16);
+                                    y = reader.nextInt(i16);
                                 } else {
-                                    x = reader.nextInt8();
-                                    y = reader.nextInt8();
+                                    x = reader.nextInt(i8);
+                                    y = reader.nextInt(i8);
                                 }
 
                                 break :blk .{ .Offset = .{
@@ -778,11 +722,11 @@ const Glyf = struct {
                                 var child_point_index: u16 = undefined;
 
                                 if (flags.arg_1_and_2_are_words) {
-                                    parent_point_index = reader.nextUint16();
-                                    child_point_index = reader.nextUint16();
+                                    parent_point_index = reader.nextInt(u16);
+                                    child_point_index = reader.nextInt(u16);
                                 } else {
-                                    parent_point_index = reader.nextUint8();
-                                    child_point_index = reader.nextUint8();
+                                    parent_point_index = reader.nextInt(u8);
+                                    child_point_index = reader.nextInt(u8);
                                 }
 
                                 break :blk .{ .Anchor = .{
@@ -794,24 +738,24 @@ const Glyf = struct {
 
                         component.rotation_and_scale = blk: {
                             if (flags.we_have_a_scale) {
-                                const scale = reader.nextF2DOT14();
+                                const scale = reader.nextInt(i16);
                                 break :blk .{
-                                    .{ scale, F2Dot14.init(0) },
-                                    .{ F2Dot14.init(0), scale },
+                                    .{ scale, 0 },
+                                    .{ 0, scale },
                                 };
                             }
 
                             if (flags.we_have_an_x_and_y_scale) {
                                 break :blk .{
-                                    .{ reader.nextF2DOT14(), F2Dot14.init(0) },
-                                    .{ F2Dot14.init(0), reader.nextF2DOT14() },
+                                    .{ reader.nextInt(i16), 0 },
+                                    .{ 0, reader.nextInt(i16) },
                                 };
                             }
 
                             if (flags.we_have_a_two_by_two) {
                                 break :blk .{
-                                    .{ reader.nextF2DOT14(), reader.nextF2DOT14() },
-                                    .{ reader.nextF2DOT14(), reader.nextF2DOT14() },
+                                    .{ reader.nextInt(i16), reader.nextInt(i16) },
+                                    .{ reader.nextInt(i16), reader.nextInt(i16) },
                                 };
                             }
                         };
