@@ -1,3 +1,4 @@
+const opcodes = @import("opcodes.zig");
 const std = @import("std");
 const wasm = @import("../wasm.zig");
 
@@ -7,7 +8,7 @@ pub fn init(data: []const u8) @This() {
     return .{ .data = data };
 }
 
-pub fn atEnd(self: @This()) bool {
+pub fn atEnd(self: *const @This()) bool {
     return self.data.len == 0;
 }
 
@@ -17,7 +18,7 @@ pub fn nextByte(self: *@This()) !u8 {
     return self.data[0];
 }
 
-pub fn peekByte(self: *@This()) !u8 {
+pub fn peekByte(self: *const @This()) !u8 {
     if (self.data.len == 0) return error.UnexpectedEndOfData;
     return self.data[0];
 }
@@ -170,6 +171,216 @@ pub fn nextGlobalType(self: *@This()) !wasm.GlobalType {
     return .{
         .value_type = try self.nextValType(),
         .mutability = try self.nextMut(),
+    };
+}
+
+pub fn nextBlockType(self: *@This()) !wasm.BlockType {
+    return switch (try self.nextInt(i33)) {
+        @bitCast(i7, @as(u7, 0x40)) => .{ .immediate = null },
+        @bitCast(i7, @as(u7, 0x6f)) => .{ .immediate = .externref },
+        @bitCast(i7, @as(u7, 0x70)) => .{ .immediate = .funcref },
+        @bitCast(i7, @as(u7, 0x7b)) => .{ .immediate = .v128 },
+        @bitCast(i7, @as(u7, 0x7c)) => .{ .immediate = .f64 },
+        @bitCast(i7, @as(u7, 0x7d)) => .{ .immediate = .f32 },
+        @bitCast(i7, @as(u7, 0x7e)) => .{ .immediate = .i64 },
+        @bitCast(i7, @as(u7, 0x7f)) => .{ .immediate = .i32 },
+        0...std.math.maxInt(u32) => |idx| .{ .indexed = .{ .value = @intCast(u32, idx) } },
+        else => error.UnsupportedBlockType,
+    };
+}
+
+pub fn nextSectionId(self: *@This()) !wasm.SectionId {
+    return @intToEnum(wasm.SectionId, try self.nextByte());
+}
+
+pub fn nextSection(self: *@This()) !wasm.Section {
+    return .{
+        .id = try self.nextSectionId(),
+        .contents = try self.nextBytes(try self.nextInt(u32)),
+    };
+}
+
+pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !wasm.Instr {
+    return switch (try self.nextByte()) {
+        opcodes.@"i32.const" => .{ .@"i32.const" = try self.nextInt(i32) },
+        opcodes.@"i64.const" => .{ .@"i64.const" = try self.nextInt(i64) },
+        opcodes.@"f32.const" => .{ .@"f32.const" = try self.nextFixedWidth(f32) },
+        opcodes.@"f64.const" => .{ .@"f64.const" = try self.nextFixedWidth(f64) },
+
+        opcodes.br_table => .{ .br_table = blk: {
+            const n_targets = try self.nextInt(u32);
+            const targets = try allocator.alloc(wasm.LabelIdx, n_targets);
+            errdefer allocator.free(targets);
+            for (targets) |*t| t.value = try self.nextInt(u32);
+            break :blk .{ targets, .{ .value = try self.nextInt(u32) } };
+        } },
+
+        inline opcodes.block,
+        opcodes.loop,
+        opcodes.@"if",
+        => |code| @unionInit(
+            wasm.Instr,
+            opcodes.shortOpcodeName(code).?,
+            try self.nextBlockType(),
+        ),
+
+        inline opcodes.br,
+        opcodes.br_if,
+        opcodes.call,
+        opcodes.@"ref.func",
+        opcodes.@"local.get",
+        opcodes.@"local.set",
+        opcodes.@"local.tee",
+        opcodes.@"global.get",
+        opcodes.@"global.set",
+        opcodes.@"table.get",
+        opcodes.@"table.set",
+        opcodes.@"memory.size",
+        opcodes.@"memory.grow",
+        => |code| @unionInit(
+            wasm.Instr,
+            opcodes.shortOpcodeName(code).?,
+            .{ .value = try self.nextInt(u32) },
+        ),
+
+        inline opcodes.@"unreachable",
+        opcodes.nop,
+        opcodes.@"else",
+        opcodes.end,
+        opcodes.@"return",
+        opcodes.@"ref.is_null",
+        opcodes.drop,
+        opcodes.@"i32.eqz",
+        opcodes.@"i32.eq",
+        opcodes.@"i32.ne",
+        opcodes.@"i32.lt_s",
+        opcodes.@"i32.lt_u",
+        opcodes.@"i32.gt_s",
+        opcodes.@"i32.gt_u",
+        opcodes.@"i32.le_s",
+        opcodes.@"i32.le_u",
+        opcodes.@"i32.ge_s",
+        opcodes.@"i32.ge_u",
+        opcodes.@"i64.eqz",
+        opcodes.@"i64.eq",
+        opcodes.@"i64.ne",
+        opcodes.@"i64.lt_s",
+        opcodes.@"i64.lt_u",
+        opcodes.@"i64.gt_s",
+        opcodes.@"i64.gt_u",
+        opcodes.@"i64.le_s",
+        opcodes.@"i64.le_u",
+        opcodes.@"i64.ge_s",
+        opcodes.@"i64.ge_u",
+        opcodes.@"f32.eq",
+        opcodes.@"f32.ne",
+        opcodes.@"f32.lt",
+        opcodes.@"f32.gt",
+        opcodes.@"f32.le",
+        opcodes.@"f32.ge",
+        opcodes.@"f64.eq",
+        opcodes.@"f64.ne",
+        opcodes.@"f64.lt",
+        opcodes.@"f64.gt",
+        opcodes.@"f64.le",
+        opcodes.@"f64.ge",
+        opcodes.@"i32.clz",
+        opcodes.@"i32.ctz",
+        opcodes.@"i32.popcnt",
+        opcodes.@"i32.add",
+        opcodes.@"i32.sub",
+        opcodes.@"i32.mul",
+        opcodes.@"i32.div_s",
+        opcodes.@"i32.div_u",
+        opcodes.@"i32.rem_s",
+        opcodes.@"i32.rem_u",
+        opcodes.@"i32.and",
+        opcodes.@"i32.or",
+        opcodes.@"i32.xor",
+        opcodes.@"i32.shl",
+        opcodes.@"i32.shr_s",
+        opcodes.@"i32.shr_u",
+        opcodes.@"i32.rotl",
+        opcodes.@"i32.rotr",
+        opcodes.@"i64.clz",
+        opcodes.@"i64.ctz",
+        opcodes.@"i64.popcnt",
+        opcodes.@"i64.add",
+        opcodes.@"i64.sub",
+        opcodes.@"i64.mul",
+        opcodes.@"i64.div_s",
+        opcodes.@"i64.div_u",
+        opcodes.@"i64.rem_s",
+        opcodes.@"i64.rem_u",
+        opcodes.@"i64.and",
+        opcodes.@"i64.or",
+        opcodes.@"i64.xor",
+        opcodes.@"i64.shl",
+        opcodes.@"i64.shr_s",
+        opcodes.@"i64.shr_u",
+        opcodes.@"i64.rotl",
+        opcodes.@"i64.rotr",
+        opcodes.@"f32.abs",
+        opcodes.@"f32.neg",
+        opcodes.@"f32.ceil",
+        opcodes.@"f32.floor",
+        opcodes.@"f32.trunc",
+        opcodes.@"f32.nearest",
+        opcodes.@"f32.sqrt",
+        opcodes.@"f32.add",
+        opcodes.@"f32.sub",
+        opcodes.@"f32.mul",
+        opcodes.@"f32.div",
+        opcodes.@"f32.min",
+        opcodes.@"f32.max",
+        opcodes.@"f32.copysign",
+        opcodes.@"f64.abs",
+        opcodes.@"f64.neg",
+        opcodes.@"f64.ceil",
+        opcodes.@"f64.floor",
+        opcodes.@"f64.trunc",
+        opcodes.@"f64.nearest",
+        opcodes.@"f64.sqrt",
+        opcodes.@"f64.add",
+        opcodes.@"f64.sub",
+        opcodes.@"f64.mul",
+        opcodes.@"f64.div",
+        opcodes.@"f64.min",
+        opcodes.@"f64.max",
+        opcodes.@"f64.copysign",
+        opcodes.@"i32.wrap_i64",
+        opcodes.@"i32.trunc_f32_s",
+        opcodes.@"i32.trunc_f32_u",
+        opcodes.@"i32.trunc_f64_s",
+        opcodes.@"i32.trunc_f64_u",
+        opcodes.@"i64.extend_i32_s",
+        opcodes.@"i64.extend_i32_u",
+        opcodes.@"i64.trunc_f32_s",
+        opcodes.@"i64.trunc_f32_u",
+        opcodes.@"i64.trunc_f64_s",
+        opcodes.@"i64.trunc_f64_u",
+        opcodes.@"f32.convert_i32_s",
+        opcodes.@"f32.convert_i32_u",
+        opcodes.@"f32.convert_i64_s",
+        opcodes.@"f32.convert_i64_u",
+        opcodes.@"f32.demote_f64",
+        opcodes.@"f64.convert_i32_s",
+        opcodes.@"f64.convert_i32_u",
+        opcodes.@"f64.convert_i64_s",
+        opcodes.@"f64.convert_i64_u",
+        opcodes.@"f64.promote_f32",
+        opcodes.@"i32.reinterpret_f32",
+        opcodes.@"i64.reinterpret_f64",
+        opcodes.@"f32.reinterpret_i32",
+        opcodes.@"f64.reinterpret_i64",
+        opcodes.@"i32.extend8_s",
+        opcodes.@"i32.extend16_s",
+        opcodes.@"i64.extend8_s",
+        opcodes.@"i64.extend16_s",
+        opcodes.@"i64.extend32_s",
+        => |code| @unionInit(wasm.Instr, opcodes.shortOpcodeName(code).?, {}),
+
+        else => error.UnsupportedOpcode,
     };
 }
 

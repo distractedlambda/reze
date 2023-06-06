@@ -1,9 +1,15 @@
 const std = @import("std");
 
-const wasm_cpu_model = std.Target.Cpu.Model{
+const Build = std.Build;
+const CrossTarget = std.zig.CrossTarget;
+const OptimizeMode = std.builtin.OptimizeMode;
+const Step = Build.Step;
+const Target = std.Target;
+
+const wasm_cpu_model = Target.Cpu.Model{
     .name = "generic",
     .llvm_name = "generic",
-    .features = std.Target.wasm.featureSet(&.{
+    .features = Target.wasm.featureSet(&.{
         .bulk_memory,
         .multivalue,
         .mutable_globals,
@@ -14,23 +20,119 @@ const wasm_cpu_model = std.Target.Cpu.Model{
     }),
 };
 
-const wasm_freestanding_target = std.zig.CrossTarget{
+const wasm_freestanding_target = CrossTarget{
     .cpu_arch = .wasm32,
     .cpu_model = .{ .explicit = &wasm_cpu_model },
     .os_tag = .freestanding,
 };
 
-const wasm_wasi_target = std.zig.CrossTarget{
+const wasm_wasi_target = CrossTarget{
     .cpu_arch = .wasm32,
     .cpu_model = .{ .explicit = &wasm_cpu_model },
     .os_tag = .wasi,
 };
 
+const third_party_dir = "third_party";
+
+fn joinComptimePaths(comptime paths: []const []const u8) []const u8 {
+    return comptime blk: {
+        var joined: []const u8 = "";
+
+        for (paths) |path| {
+            if (path.len == 0)
+                continue;
+
+            if (joined.len != 0)
+                joined = joined ++ std.fs.path.sep_str;
+
+            joined = joined ++ path;
+        }
+
+        break :blk joined;
+    };
+}
+
+fn prefixComptimePaths(comptime prefix: []const u8, comptime paths: []const []const u8) []const u8 {
+    return comptime blk: {
+        var results: [paths.len][]const u8 = undefined;
+
+        for (&results, paths) |*result, path|
+            result.* = joinComptimePaths(&.{ prefix, path });
+
+        break :blk &results;
+    };
+}
+
 const Configurator = struct {
-    build: *std.Build,
-    target: ?std.zig.CrossTarget = null,
-    optimize_mode: ?std.builtin.OptimizeMode = null,
-    run_unit_tests: ?*std.Build.Step.Run = null,
+    build: *Build,
+    target: ?CrossTarget = null,
+    optimize_mode: ?OptimizeMode = null,
+    run_unit_tests: ?*Step.Run = null,
+
+    const GlfwOptions = struct {
+        target: CrossTarget,
+        mode: OptimizeMode,
+    };
+
+    fn addGlfw(self: *@This(), options: GlfwOptions) *Step.Compile {
+        const glfw_dir = joinComptimePaths(&.{ third_party_dir, "glfw" });
+        const include_dir = joinComptimePaths(&.{ glfw_dir, "include" });
+        const src_dir = joinComptimePaths(&.{ glfw_dir, "src" });
+
+        const lib = self.build.addStaticLibrary(.{
+            .name = "glfw",
+            .target = options.target,
+            .optimize = options.mode,
+            .link_libc = true,
+        });
+
+        lib.addIncludePath(include_dir);
+        lib.installHeadersDirectory(include_dir, "");
+
+        lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
+            "context.c",
+            "egl_context.c",
+            "init.c",
+            "input.c",
+            "monitor.c",
+            "window.c",
+        }), &.{});
+
+        if (options.target.isDarwin()) {
+            lib.defineCMacro("_GLFW_COCOA", null);
+            lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
+                "cocoa_init.m",
+                "cocoa_joystick.m",
+                "cocoa_monitor.m",
+                "cocoa_time.c",
+                "cocoa_window.m",
+                "nsgl_context.m",
+            }), &.{});
+        } else if (options.target.isWindows()) {
+            lib.defineCMacro("_GLFW_WIN32", null);
+            lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
+                "wgl_context.c",
+                "win32_init.c",
+                "win32_joystick.c",
+                "win32_monitor.c",
+                "win32_thread.c",
+                "win32_time.c",
+                "win32_window.c",
+            }), &.{});
+        } else {
+            lib.defineCMacro("_GLFW_X11", null);
+            lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
+                "glx_context.c",
+                "linux_joystick.c",
+                "posix_thread.c",
+                "posix_time.c",
+                "x11_init.c",
+                "x11_monitor.c",
+                "x11_window.c",
+                "xkb_unicode.c",
+            }), &.{});
+        }
+    }
 
     fn addWasmModule(
         self: *@This(),
@@ -72,7 +174,7 @@ const Configurator = struct {
     fn configureTestWasmModule(self: *@This(), name: []const u8) void {
         const root = std.build.FileSource{ .path = self.build.fmt("src/test_modules/{s}.zig", .{name}) };
         for (std.meta.tags(std.builtin.OptimizeMode)) |mode| {
-            const mode_specific_name = self.build.fmt("{s}-{s}", .{name, @tagName(mode)});
+            const mode_specific_name = self.build.fmt("{s}-{s}", .{ name, @tagName(mode) });
             const module = self.addFreestandingWasmModule(mode_specific_name, root, mode);
             const install_module = self.build.addInstallArtifact(module);
             install_module.dest_dir = .{ .custom = "test_modules" };
