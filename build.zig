@@ -35,37 +35,6 @@ const wasm_wasi_target = CrossTarget{
     .os_tag = .wasi,
 };
 
-const third_party_dir = "third_party";
-
-fn joinComptimePaths(comptime paths: []const []const u8) []const u8 {
-    return comptime blk: {
-        var joined: []const u8 = "";
-
-        for (paths) |path| {
-            if (path.len == 0)
-                continue;
-
-            if (joined.len != 0)
-                joined = joined ++ std.fs.path.sep_str;
-
-            joined = joined ++ path;
-        }
-
-        break :blk joined;
-    };
-}
-
-fn prefixComptimePaths(comptime prefix: []const u8, comptime paths: []const []const u8) []const []const u8 {
-    return comptime blk: {
-        var results: [paths.len][]const u8 = undefined;
-
-        for (&results, paths) |*result, path|
-            result.* = joinComptimePaths(&.{ prefix, path });
-
-        break :blk &results;
-    };
-}
-
 const Configurator = struct {
     build: *Build,
     target: ?CrossTarget = null,
@@ -78,10 +47,6 @@ const Configurator = struct {
     };
 
     fn addGlfw(self: *@This(), options: GlfwOptions) *Step.Compile {
-        const glfw_dir = comptime joinComptimePaths(&.{ third_party_dir, "glfw" });
-        const include_dir = joinComptimePaths(&.{ glfw_dir, "include" });
-        const src_dir = comptime joinComptimePaths(&.{ glfw_dir, "src" });
-
         const lib = self.build.addStaticLibrary(.{
             .name = "glfw",
             .target = options.target,
@@ -89,56 +54,81 @@ const Configurator = struct {
             .link_libc = true,
         });
 
-        lib.addIncludePath(include_dir);
-        lib.installHeadersDirectory(include_dir, "");
+        lib.addIncludePath("third_party/glfw/include");
 
-        lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
-            "context.c",
-            "egl_context.c",
-            "init.c",
-            "input.c",
-            "monitor.c",
-            "window.c",
-            "vulkan.c",
-        }), &.{});
+        lib.addCSourceFiles(&.{
+            "third_party/glfw/src/context.c",
+            "third_party/glfw/src/egl_context.c",
+            "third_party/glfw/src/init.c",
+            "third_party/glfw/src/input.c",
+            "third_party/glfw/src/monitor.c",
+            "third_party/glfw/src/window.c",
+            "third_party/glfw/src/vulkan.c",
+        }, &.{});
 
         if (options.target.isDarwin()) {
             lib.linkFramework("Cocoa");
             lib.linkFramework("IOKit");
             lib.defineCMacro("_GLFW_COCOA", null);
-            lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
-                "cocoa_init.m",
-                "cocoa_joystick.m",
-                "cocoa_monitor.m",
-                "cocoa_time.c",
-                "cocoa_window.m",
-                "nsgl_context.m",
-                "osmesa_context.c",
-                "posix_thread.c",
-            }), &.{});
+            lib.addCSourceFiles(&.{
+                "third_party/glfw/src/cocoa_init.m",
+                "third_party/glfw/src/cocoa_joystick.m",
+                "third_party/glfw/src/cocoa_monitor.m",
+                "third_party/glfw/src/cocoa_time.c",
+                "third_party/glfw/src/cocoa_window.m",
+                "third_party/glfw/src/nsgl_context.m",
+                "third_party/glfw/src/osmesa_context.c",
+                "third_party/glfw/src/posix_thread.c",
+            }, &.{});
         } else if (options.target.isWindows()) {
             lib.defineCMacro("_GLFW_WIN32", null);
-            lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
-                "wgl_context.c",
-                "win32_init.c",
-                "win32_joystick.c",
-                "win32_monitor.c",
-                "win32_thread.c",
-                "win32_time.c",
-                "win32_window.c",
-            }), &.{});
+            lib.addCSourceFiles(&.{
+                "third_party/glfw/src/wgl_context.c",
+                "third_party/glfw/src/win32_init.c",
+                "third_party/glfw/src/win32_joystick.c",
+                "third_party/glfw/src/win32_monitor.c",
+                "third_party/glfw/src/win32_thread.c",
+                "third_party/glfw/src/win32_time.c",
+                "third_party/glfw/src/win32_window.c",
+            }, &.{});
         } else {
             lib.defineCMacro("_GLFW_X11", null);
-            lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
-                "glx_context.c",
-                "linux_joystick.c",
-                "posix_thread.c",
-                "posix_time.c",
-                "x11_init.c",
-                "x11_monitor.c",
-                "x11_window.c",
-                "xkb_unicode.c",
-            }), &.{});
+
+            lib.addIncludePath("third_party/libx11/include");
+            lib.addIncludePath("third_party/libxext/include");
+            lib.addIncludePath("third_party/libxfixes/include");
+            lib.addIncludePath("third_party/libxi/include");
+            lib.addIncludePath("third_party/libxinerama/include");
+            lib.addIncludePath("third_party/libxrandr/include");
+            lib.addIncludePath("third_party/libxrender/include");
+            lib.addIncludePath("third_party/xorgproto/include");
+
+            lib.addConfigHeader(self.build.addConfigHeader(
+                .{
+                    .style = .{
+                        .autoconf = .{
+                            .path = "third_party/libxcursor/include/X11/Xcursor/Xcursor.h.in",
+                        },
+                    },
+                    .include_path = "X11/Xcursor/Xcursor.h",
+                },
+                .{
+                    .XCURSOR_LIB_MAJOR = 1,
+                    .XCURSOR_LIB_MINOR = 2,
+                    .XCURSOR_LIB_REVISION = 1,
+                },
+            ));
+
+            lib.addCSourceFiles(&.{
+                "third_party/glfw/src/glx_context.c",
+                "third_party/glfw/src/linux_joystick.c",
+                "third_party/glfw/src/posix_thread.c",
+                "third_party/glfw/src/posix_time.c",
+                "third_party/glfw/src/x11_init.c",
+                "third_party/glfw/src/x11_monitor.c",
+                "third_party/glfw/src/x11_window.c",
+                "third_party/glfw/src/xkb_unicode.c",
+            }, &.{});
         }
 
         return lib;
@@ -224,18 +214,12 @@ const Configurator = struct {
             break :blk options.createModule();
         });
 
-        unit_tests.linkLibrary(self.addGlfw(.{
-            .target = self.target.?,
-            .mode = self.optimize_mode.?,
-        }));
-
-        self.run_unit_tests = self.build.addRunArtifact(unit_tests);
-        self.run_unit_tests.?.cwd = self.build.install_path;
-
-        self.configureAllTestWasmModules();
+        const glfw_lib = self.addGlfw(.{ .target = self.target.?, .mode = self.optimize_mode.? });
+        unit_tests.linkLibrary(glfw_lib);
+        unit_tests.include_dirs.appendSlice(glfw_lib.include_dirs.items) catch @panic("OOM");
 
         const test_step = self.build.step("test", "Run unit tests");
-        test_step.dependOn(&self.run_unit_tests.?.step);
+        test_step.dependOn(&self.build.addRunArtifact(unit_tests).step);
     }
 
     fn configureBuild(self: *@This()) void {
