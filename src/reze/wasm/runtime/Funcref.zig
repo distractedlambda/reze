@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const runtime = @import("runtime.zig");
+
 context: *anyopaque,
 vtable: *const VTable,
 
@@ -20,45 +22,43 @@ pub const Signature = struct {
     params: []const ValType,
     results: []const ValType,
 
-    fn of(comptime F: type) @This() {
-        return comptime switch (@typeInfo(F)) {
-            .Fn => |info| blk: {
-                if (info.calling_convention != .Unspecified)
-                    @compileError("calling convention must be Unspecified");
+    // fn of(comptime F: type) @This() {
+    //     return comptime switch (@typeInfo(F)) {
+    //         .Fn => |info| blk: {
+    //             if (info.calling_convention != .Unspecified)
+    //                 @compileError("calling convention must be Unspecified");
 
-                if (info.alignment != function_alignment)
-                    @compileError("alignment must be the default for functions");
+    //             if (info.alignment != function_alignment)
+    //                 @compileError("alignment must be the default for functions");
 
-                if (info.is_generic)
-                    @compileError("function cannot be generic");
+    //             if (info.is_generic)
+    //                 @compileError("function cannot be generic");
 
-                if (info.is_var_args)
-                    @compileError("function cannot have varargs");
+    //             if (info.is_var_args)
+    //                 @compileError("function cannot have varargs");
 
-                if (info.params.len == 0)
-                    @compileError("function must have at least a context parameter");
+    //             if (info.params.len == 0)
+    //                 @compileError("function must have at least a context parameter");
 
-                switch (@typeInfo(info.params[0].type.?)) {
-                    .Pointer => |pointer_info| {
-                        if (pointer_info.size != .One)
-                            @compileError("context parameter must be a pointer to a single value");
-                    },
+    //             switch (@typeInfo(info.params[0].type.?)) {
+    //                 .Pointer => |pointer_info| {
+    //                     if (pointer_info.size != .One)
+    //                         @compileError("context parameter must be a pointer to a single value");
+    //                 },
 
-                    else => @compileError("context parameter must be a pointer"),
-                }
+    //                 else => @compileError("context parameter must be a pointer"),
+    //             }
 
-                var params: [info.params.len - 1]ValType = undefined;
-                for (&params, info.params[1..]) |*d, s| d.* = ValType.of(s.type);
+    //             var params: [info.params.len - 1]ValType = undefined;
+    //             for (&params, info.params[1..]) |*d, s| d.* = ValType.of(s.type);
 
-                const results = switch (@typeInfo(info.return_type.?)) {
-                    .Struct =>
+    //             // const results = switch (@typeInfo(info.return_type.?)) {
+    //             // };
+    //         },
 
-                };
-            },
-
-            else => @compileError("expected a function type, but got " ++ @typeName(F)),
-        };
-    }
+    //         else => @compileError("expected a function type, but got " ++ @typeName(F)),
+    //     };
+    // }
 
     fn check(self: @This(), comptime expected: @This()) !void {
         blk: {
@@ -135,9 +135,9 @@ pub const ValType = enum {
             i64 => .i64,
             f32 => .f32,
             f64 => .f64,
-            wasmrt.v128 => .v128,
-            wasmrt.funcref => .funcref,
-            wasmrt.externref => .externref,
+            runtime.v128 => .v128,
+            runtime.funcref => .funcref,
+            runtime.externref => .externref,
             else => unreachable,
         };
     }
@@ -148,9 +148,9 @@ pub const ValType = enum {
             .i64 => i64,
             .f32 => f32,
             .f64 => f64,
-            .v128 => wasmrt.v128,
-            .funcref => wasmrt.funcref,
-            .externref => wasmrt.externref,
+            .v128 => runtime.v128,
+            .funcref => runtime.funcref,
+            .externref => runtime.externref,
         };
     }
 

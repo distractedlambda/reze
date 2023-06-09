@@ -103,6 +103,7 @@ const Configurator = struct {
 
         if (options.target.isDarwin()) {
             lib.defineCMacro("_GLFW_COCOA", null);
+
             lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
                 "cocoa_init.m",
                 "cocoa_joystick.m",
@@ -111,6 +112,8 @@ const Configurator = struct {
                 "cocoa_window.m",
                 "nsgl_context.m",
             }), &.{});
+
+            lib.linkFramework("Carbon");
         } else if (options.target.isWindows()) {
             lib.defineCMacro("_GLFW_WIN32", null);
             lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{

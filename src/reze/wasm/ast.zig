@@ -647,3 +647,7 @@ pub const ValType = enum(u8) {
 pub const VecType = enum(u8) {
     v128 = 0x7b,
 };
+
+test {
+    @import("std").testing.refAllDecls(@This());
+}
