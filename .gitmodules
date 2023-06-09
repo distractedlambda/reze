@@ -4,3 +4,6 @@
 [submodule "third_party/glfw"]
 	path = third_party/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "third_party/libx11"]
+	path = third_party/libx11
+	url = https://gitlab.freedesktop.org/xorg/lib/libx11.git
