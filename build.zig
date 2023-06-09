@@ -55,7 +55,7 @@ fn joinComptimePaths(comptime paths: []const []const u8) []const u8 {
     };
 }
 
-fn prefixComptimePaths(comptime prefix: []const u8, comptime paths: []const []const u8) []const u8 {
+fn prefixComptimePaths(comptime prefix: []const u8, comptime paths: []const []const u8) []const []const u8 {
     return comptime blk: {
         var results: [paths.len][]const u8 = undefined;
 
@@ -71,35 +71,16 @@ const Configurator = struct {
     target: ?CrossTarget = null,
     optimize_mode: ?OptimizeMode = null,
     run_unit_tests: ?*Step.Run = null,
-    geom_module: ?*Module = null,
-    glfw_libs: AutoHashMapUnmanaged(GlfwOptions, *Step.Compile) = .{},
-    glfw_module: ?*Module = null,
-    freetype_libs: AutoHashMapUnmanaged(FreetypeOptions, *Step.Compile) = .{},
-    freetype_module: ?*Module = null,
-
-    fn getAllocator(self: *const @This()) Allocator {
-        return self.build.allocator;
-    }
-
-    fn getGeomModule(self: *@This()) *Module {
-        if (self.geom_module) |mod| return mod;
-        const mod = self.build.createModule(.{ .source_file = .{ .path = "src/geom/geom.zig" } });
-        self.geom_module = mod;
-        return mod;
-    }
 
     const GlfwOptions = struct {
         target: CrossTarget,
         mode: OptimizeMode,
     };
 
-    fn getGlfwLib(self: *@This(), options: GlfwOptions) *Step.Compile {
-        const slot = self.glfw_libs.getOrPut(self.getAllocator(), options) catch @panic("OOM");
-        if (slot.found_existing) return slot.value_ptr.*;
-
-        const glfw_dir = joinComptimePaths(&.{ third_party_dir, "glfw" });
+    fn addGlfw(self: *@This(), options: GlfwOptions) *Step.Compile {
+        const glfw_dir = comptime joinComptimePaths(&.{ third_party_dir, "glfw" });
         const include_dir = joinComptimePaths(&.{ glfw_dir, "include" });
-        const src_dir = joinComptimePaths(&.{ glfw_dir, "src" });
+        const src_dir = comptime joinComptimePaths(&.{ glfw_dir, "src" });
 
         const lib = self.build.addStaticLibrary(.{
             .name = "glfw",
@@ -155,20 +136,7 @@ const Configurator = struct {
             }), &.{});
         }
 
-        slot.value_ptr.* = lib;
         return lib;
-    }
-
-    fn getGlfwModule(self: *@This()) *Module {
-        if (self.glfw_module) |mod| return mod;
-
-        const mod = self.build.createModule(.{
-            .source_file = .{ .path = "src/glfw/glfw.zig" },
-            .dependencies = &.{.{ .name = "geom", .module = self.getGeomModule() }},
-        });
-
-        self.glfw_module = mod;
-        return mod;
     }
 
     const FreetypeOptions = struct {
@@ -180,17 +148,6 @@ const Configurator = struct {
         const slot = self.freetype_libs.getOrPut(self.getAllocator(), options) catch @panic("OOM");
         if (slot.found_existing) return slot.value_ptr.*;
         @panic("TODO");
-    }
-
-    fn getFreetypeModule(self: *@This()) *Module {
-        if (self.freetype_module) |mod| return mod;
-
-        const mod = self.build.createModule(.{
-            .source_file = .{ .path = "src/freetype/freetype.zig" },
-        });
-
-        self.freetype_module = mod;
-        return mod;
     }
 
     fn addWasmModule(
@@ -249,10 +206,31 @@ const Configurator = struct {
 
     fn configureUnitTests(self: *@This()) void {
         const unit_tests = self.build.addTest(.{
-            .root_source_file = .{ .path = "src/main.zig" },
+            .root_source_file = .{ .path = "src/tests.zig" },
             .target = self.target.?,
             .optimize = self.optimize_mode.?,
         });
+
+        unit_tests.addAnonymousModule("reze", .{
+            .source_file = .{ .path = "src/reze/reze.zig" },
+            .dependencies = &.{
+                .{
+                    .name = "build_options",
+                    .module = blk: {
+                        const options = self.build.addOptions();
+                        options.addOption(bool, "linking_glfw", true);
+                        options.addOption(bool, "linking_freetype", false);
+                        options.addOption(bool, "linking_fontconfig", false);
+                        break :blk options.createModule();
+                    },
+                },
+            },
+        });
+
+        unit_tests.linkLibrary(self.addGlfw(.{
+            .target = self.target.?,
+            .mode = self.optimize_mode.?,
+        }));
 
         self.run_unit_tests = self.build.addRunArtifact(unit_tests);
         self.run_unit_tests.?.cwd = self.build.install_path;

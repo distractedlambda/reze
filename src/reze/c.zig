@@ -1,7 +1,7 @@
-const buildconfig = @import("buildconfig");
+const build_options = @import("build_options");
 
 pub usingnamespace @cImport({
-    if (buildconfig.linking_glfw) {
+    if (build_options.linking_glfw) {
         @cDefine("GLFW_INCLUDE_NONE", {});
 
         @cDefine("GLFW_NATIVE_INCLUDE_NONE", {});
@@ -16,11 +16,11 @@ pub usingnamespace @cImport({
         @cInclude("GLFW/glfw3native.h");
     }
 
-    if (buildconfig.linking_freetype) {
+    if (build_options.linking_freetype) {
         // TODO
     }
 
-    if (buildconfig.linking_fontconfig) {
+    if (build_options.linking_fontconfig) {
         // TODO
     }
 });
