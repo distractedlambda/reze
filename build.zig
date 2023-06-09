@@ -209,25 +209,17 @@ const Configurator = struct {
 
     fn configureUnitTests(self: *@This()) void {
         const unit_tests = self.build.addTest(.{
-            .root_source_file = .{ .path = "src/tests.zig" },
+            .root_source_file = .{ .path = "src/reze/reze.zig" },
             .target = self.target.?,
             .optimize = self.optimize_mode.?,
         });
 
-        unit_tests.addAnonymousModule("reze", .{
-            .source_file = .{ .path = "src/reze/reze.zig" },
-            .dependencies = &.{
-                .{
-                    .name = "build_options",
-                    .module = blk: {
-                        const options = self.build.addOptions();
-                        options.addOption(bool, "linking_glfw", true);
-                        options.addOption(bool, "linking_freetype", false);
-                        options.addOption(bool, "linking_fontconfig", false);
-                        break :blk options.createModule();
-                    },
-                },
-            },
+        unit_tests.addModule("build_options", blk: {
+            const options = self.build.addOptions();
+            options.addOption(bool, "linking_glfw", true);
+            options.addOption(bool, "linking_freetype", false);
+            options.addOption(bool, "linking_fontconfig", false);
+            break :blk options.createModule();
         });
 
         unit_tests.linkLibrary(self.addGlfw(.{

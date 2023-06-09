@@ -171,7 +171,7 @@ pub fn nextElemKind(self: *@This()) !ast.ElemKind {
 pub fn nextGlobalType(self: *@This()) !ast.GlobalType {
     return .{
         .value_type = try self.nextValType(),
-        .mutability = try self.nextMut(),
+        .mut = try self.nextMut(),
     };
 }
 
@@ -385,7 +385,7 @@ pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !ast.Instr {
     };
 }
 
-test "ref all decls" {
+test {
     std.testing.refAllDecls(@This());
 }
 

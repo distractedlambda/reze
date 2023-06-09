@@ -1095,6 +1095,6 @@ pub fn threadOpcodeName(opcode: u32) ?[:0]const u8 {
     };
 }
 
-test "ref all decls" {
+test {
     @import("std").testing.refAllDecls(@This());
 }

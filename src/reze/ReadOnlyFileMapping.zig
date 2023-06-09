@@ -24,6 +24,6 @@ pub fn deinit(self: @This()) void {
     std.os.close(self.fd);
 }
 
-test "ref all decls" {
+test {
     std.testing.refAllDecls(@This());
 }

@@ -13,6 +13,7 @@ pub const Error = error{
     PlatformError,
     FormatUnavailable,
     NoWindowContext,
+    UnknownGlfwError,
 };
 
 pub fn check() Error!void {
@@ -22,7 +23,7 @@ pub fn check() Error!void {
 }
 
 fn raise(code: c_int, message: [*:0]const u8) Error {
-    std.log.scoped(.glfw).err("{s}", message);
+    std.log.scoped(.glfw).err("{s}", .{message});
     return switch (code) {
         c.GLFW_NOT_INITIALIZED => error.NotInitialized,
         c.GLFW_NO_CURRENT_CONTEXT => error.NoCurrentContext,
@@ -30,10 +31,10 @@ fn raise(code: c_int, message: [*:0]const u8) Error {
         c.GLFW_INVALID_VALUE => error.InvalidValue,
         c.GLFW_OUT_OF_MEMORY => error.OutOfMemory,
         c.GLFW_API_UNAVAILABLE => error.ApiUnavailable,
-        c.GLFW_VERSION_UNAVAILALBE => error.VersionUnavailable,
+        c.GLFW_VERSION_UNAVAILABLE => error.VersionUnavailable,
         c.GLFW_PLATFORM_ERROR => error.PlatformError,
         c.GLFW_FORMAT_UNAVAILABLE => error.FormatUnavailable,
         c.GLFW_NO_WINDOW_CONTEXT => error.NoWindowContext,
-        else => unreachable,
+        else => error.UnknownGlfwError,
     };
 }

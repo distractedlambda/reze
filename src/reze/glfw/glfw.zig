@@ -56,7 +56,7 @@ pub fn postEmptyEvent() Error!void {
 pub fn currentContext() Error!?*Window {
     const result = c.glfwGetCurrentContext();
     try err.check();
-    return result;
+    return @ptrCast(?*Window, result);
 }
 
 pub fn swapInterval(interval: c_int) Error!void {
@@ -77,7 +77,7 @@ pub fn getProcAddress(procname: [*:0]const u8) Error!?*const anyopaque {
 }
 
 pub fn vulkanSupported() Error!bool {
-    const result = c.glfwGetVulkanSupported();
+    const result = c.glfwVulkanSupported();
     try err.check();
     return result != c.GLFW_FALSE;
 }
@@ -86,7 +86,7 @@ pub fn getRequiredInstanceExtensions() Error![]const [*:0]const u8 {
     var count: u32 = undefined;
     const extensions = c.glfwGetRequiredInstanceExtensions(&count);
     try err.check();
-    return extensions[0..count];
+    return @ptrCast([*]const [*:0]const u8, extensions)[0..count];
 }
 
 pub fn getTime() Error!f64 {
@@ -98,4 +98,8 @@ pub fn getTime() Error!f64 {
 pub fn setTime(time_s: f64) Error!void {
     c.glfwSetTime(time_s);
     try err.check();
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }

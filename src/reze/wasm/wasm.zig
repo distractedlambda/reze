@@ -4,8 +4,5 @@ pub const runtime = @import("runtime/runtime.zig");
 pub const Decoder = @import("Decoder.zig");
 
 test {
-    _ = ast;
-    _ = opcodes;
-    _ = runtime;
-    _ = Decoder;
+    @import("std").testing.refAllDecls(@This());
 }
