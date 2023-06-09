@@ -60,9 +60,23 @@ pub const Monitor = opaque {
         return result;
     }
 
-    pub fn getName(self: *Monitor) Error![*:0]u8 {
+    pub fn getName(self: *Monitor) Error![*:0]const u8 {
         const name = c.glfwGetMonitorName(self.glfwMonitor());
         try err.check();
         return name.?;
     }
+
+    test {
+        _ = &getAll;
+        _ = &getContentScale;
+        _ = &getName;
+        _ = &getPhysicalSize_mm;
+        _ = &getPos;
+        _ = &getPrimary;
+        _ = &getWorkarea;
+    }
 };
+
+test {
+    _ = Monitor;
+}

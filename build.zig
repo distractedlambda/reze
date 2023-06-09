@@ -99,11 +99,13 @@ const Configurator = struct {
             "input.c",
             "monitor.c",
             "window.c",
+            "vulkan.c",
         }), &.{});
 
         if (options.target.isDarwin()) {
+            lib.linkFramework("Cocoa");
+            lib.linkFramework("IOKit");
             lib.defineCMacro("_GLFW_COCOA", null);
-
             lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
                 "cocoa_init.m",
                 "cocoa_joystick.m",
@@ -113,11 +115,7 @@ const Configurator = struct {
                 "nsgl_context.m",
                 "osmesa_context.c",
                 "posix_thread.c",
-                "vulkan.c",
             }), &.{});
-
-            lib.linkFramework("Cocoa");
-            lib.linkFramework("IOKit");
         } else if (options.target.isWindows()) {
             lib.defineCMacro("_GLFW_WIN32", null);
             lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{

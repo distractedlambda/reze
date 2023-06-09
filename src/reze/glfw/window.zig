@@ -113,8 +113,8 @@ pub const Window = opaque {
         if (options.focused) |v|
             try windowHint(c.GLFW_FOCUSED, @boolToInt(v));
 
-        if (options.iconified) |v|
-            try windowHint(c.GLFW_ICONIFIED, @boolToInt(v));
+        if (options.auto_iconify) |v|
+            try windowHint(c.GLFW_AUTO_ICONIFY, @boolToInt(v));
 
         if (options.resizable) |v|
             try windowHint(c.GLFW_RESIZABLE, @boolToInt(v));
@@ -314,7 +314,7 @@ pub const Window = opaque {
         try err.check();
     }
 
-    pub fn setAspectRatio(self: *Window, ratio: ?Ratio(c_int)) void {
+    pub fn setAspectRatio(self: *Window, ratio: ?Ratio(c_int)) Error!void {
         c.glfwSetWindowAspectRatio(
             self.glfwWindow(),
             if (ratio) |r| r.numerator else c.GLFW_DONT_CARE,
@@ -389,10 +389,10 @@ pub const Window = opaque {
         try err.check();
     }
 
-    pub fn getMonitor(self: *Window) Error!*Monitor {
+    pub fn getMonitor(self: *Window) Error!?*Monitor {
         const result = c.glfwGetWindowMonitor(self.glfwWindow());
         try err.check();
-        return result.?;
+        return @ptrCast(?*Monitor, result);
     }
 
     pub fn setUserPointer(self: *Window, pointer: ?*anyopaque) Error!void {
@@ -434,4 +434,40 @@ pub const Window = opaque {
 
         try err.check();
     }
+
+    test {
+        _ = &create;
+        _ = &destroy;
+        _ = &focus;
+        _ = &getContentScale;
+        _ = &getFramebufferSize;
+        _ = &getMonitor;
+        _ = &getOpacity;
+        _ = &getPos;
+        _ = &getSize;
+        _ = &getUserPointer;
+        _ = &hide;
+        _ = &iconify;
+        _ = &makeContextCurrent;
+        _ = &maximize;
+        _ = &requestAttention;
+        _ = &restore;
+        _ = &setAspectRatio;
+        _ = &setIcon;
+        _ = &setOpacity;
+        _ = &setPos;
+        _ = &setPosCallback;
+        _ = &setShouldClose;
+        _ = &setSize;
+        _ = &setSizeLimits;
+        _ = &setTitle;
+        _ = &setUserPointer;
+        _ = &shouldClose;
+        _ = &show;
+        _ = &swapBuffers;
+    }
 };
+
+test {
+    _ = Window;
+}
