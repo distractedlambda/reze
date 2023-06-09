@@ -111,9 +111,13 @@ const Configurator = struct {
                 "cocoa_time.c",
                 "cocoa_window.m",
                 "nsgl_context.m",
+                "osmesa_context.c",
+                "posix_thread.c",
+                "vulkan.c",
             }), &.{});
 
-            lib.linkFramework("Carbon");
+            lib.linkFramework("Cocoa");
+            lib.linkFramework("IOKit");
         } else if (options.target.isWindows()) {
             lib.defineCMacro("_GLFW_WIN32", null);
             lib.addCSourceFiles(prefixComptimePaths(src_dir, &.{
