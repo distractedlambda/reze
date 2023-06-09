@@ -1,5 +1,4 @@
 const std = @import("std");
-const wasmrt = @import("wasmrt.zig");
 
 context: *anyopaque,
 vtable: *const VTable,

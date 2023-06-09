@@ -1,6 +1,7 @@
-const opcodes = @import("opcodes.zig");
 const std = @import("std");
-const wasm = @import("../wasm.zig");
+
+const ast = @import("ast.zig");
+const opcodes = @import("opcodes.zig");
 
 data: []const u8,
 
@@ -90,45 +91,45 @@ pub fn nextFixedWidth(self: *@This(), comptime T: type) !T {
     );
 }
 
-pub fn nextByteVector(self: *@This()) !wasm.Name {
+pub fn nextByteVector(self: *@This()) !ast.Name {
     return try self.nextBytes(try self.nextInt(u32));
 }
 
 // TODO: validate UTF8?
 pub const nextName = nextByteVector;
 
-pub fn nextNumType(self: *@This()) !wasm.NumType {
-    return std.meta.intToEnum(wasm.NumType, try self.nextByte()) catch
+pub fn nextNumType(self: *@This()) !ast.NumType {
+    return std.meta.intToEnum(ast.NumType, try self.nextByte()) catch
         error.UnsupportedNumberType;
 }
 
-pub fn nextVecType(self: *@This()) !wasm.VecType {
-    return std.meta.intToEnum(wasm.VecType, try self.nextByte()) catch
+pub fn nextVecType(self: *@This()) !ast.VecType {
+    return std.meta.intToEnum(ast.VecType, try self.nextByte()) catch
         error.UnsupportedVectorType;
 }
 
-pub fn nextRefType(self: *@This()) !wasm.RefType {
-    return std.meta.intToEnum(wasm.RefType, try self.nextByte()) catch
+pub fn nextRefType(self: *@This()) !ast.RefType {
+    return std.meta.intToEnum(ast.RefType, try self.nextByte()) catch
         error.UnsupportedReferenceType;
 }
 
-pub fn nextValType(self: *@This()) !wasm.ValType {
-    return std.meta.intToEnum(wasm.ValType, try self.nextByte()) catch
+pub fn nextValType(self: *@This()) !ast.ValType {
+    return std.meta.intToEnum(ast.ValType, try self.nextByte()) catch
         error.UnsupportedValueType;
 }
 
-pub fn nextResultType(self: *@This()) !wasm.ResultType {
+pub fn nextResultType(self: *@This()) !ast.ResultType {
     const len = try self.nextInt(u32);
     const types = try self.nextBytes(len);
 
     for (types) |t|
-        _ = std.meta.intToEnum(wasm.ValType, t) catch
+        _ = std.meta.intToEnum(ast.ValType, t) catch
             return error.UnsupportedValueType;
 
-    return std.mem.bytesAsSlice(wasm.ValType, types);
+    return std.mem.bytesAsSlice(ast.ValType, types);
 }
 
-pub fn nextFuncType(self: *@This()) !wasm.FuncType {
+pub fn nextFuncType(self: *@This()) !ast.FuncType {
     if (try self.nextByte() != 0x60)
         return error.UnsupportedFunctionType;
 
@@ -138,7 +139,7 @@ pub fn nextFuncType(self: *@This()) !wasm.FuncType {
     };
 }
 
-pub fn nextLimits(self: *@This()) !wasm.Limits {
+pub fn nextLimits(self: *@This()) !ast.Limits {
     return switch (try self.nextByte()) {
         0x00 => .{ .min = try self.nextInt(u32) },
         0x01 => .{ .min = try self.nextInt(u32), .max = try self.nextInt(u32) },
@@ -146,35 +147,35 @@ pub fn nextLimits(self: *@This()) !wasm.Limits {
     };
 }
 
-pub fn nextMemType(self: *@This()) !wasm.MemType {
+pub fn nextMemType(self: *@This()) !ast.MemType {
     return .{ .limits = try self.nextLimits() };
 }
 
-pub fn nextTableType(self: *@This()) !wasm.TableType {
+pub fn nextTableType(self: *@This()) !ast.TableType {
     return .{
         .element_type = try self.nextRefType(),
         .limits = try self.nextLimits(),
     };
 }
 
-pub fn nextMut(self: *@This()) !wasm.Mut {
-    return std.meta.intToEnum(wasm.Mut, try self.nextByte()) catch
+pub fn nextMut(self: *@This()) !ast.Mut {
+    return std.meta.intToEnum(ast.Mut, try self.nextByte()) catch
         error.UnsupportedMutability;
 }
 
-pub fn nextElemKind(self: *@This()) !wasm.ElemKind {
-    return std.meta.intToEnum(wasm.ElemKind, try self.nextByte()) catch
+pub fn nextElemKind(self: *@This()) !ast.ElemKind {
+    return std.meta.intToEnum(ast.ElemKind, try self.nextByte()) catch
         error.UnsupportedElemKind;
 }
 
-pub fn nextGlobalType(self: *@This()) !wasm.GlobalType {
+pub fn nextGlobalType(self: *@This()) !ast.GlobalType {
     return .{
         .value_type = try self.nextValType(),
         .mutability = try self.nextMut(),
     };
 }
 
-pub fn nextBlockType(self: *@This()) !wasm.BlockType {
+pub fn nextBlockType(self: *@This()) !ast.BlockType {
     return switch (try self.nextInt(i33)) {
         @bitCast(i7, @as(u7, 0x40)) => .{ .immediate = null },
         @bitCast(i7, @as(u7, 0x6f)) => .{ .immediate = .externref },
@@ -189,18 +190,18 @@ pub fn nextBlockType(self: *@This()) !wasm.BlockType {
     };
 }
 
-pub fn nextSectionId(self: *@This()) !wasm.SectionId {
-    return @intToEnum(wasm.SectionId, try self.nextByte());
+pub fn nextSectionId(self: *@This()) !ast.SectionId {
+    return @intToEnum(ast.SectionId, try self.nextByte());
 }
 
-pub fn nextSection(self: *@This()) !wasm.Section {
+pub fn nextSection(self: *@This()) !ast.Section {
     return .{
         .id = try self.nextSectionId(),
         .contents = try self.nextBytes(try self.nextInt(u32)),
     };
 }
 
-pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !wasm.Instr {
+pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !ast.Instr {
     return switch (try self.nextByte()) {
         opcodes.@"i32.const" => .{ .@"i32.const" = try self.nextInt(i32) },
         opcodes.@"i64.const" => .{ .@"i64.const" = try self.nextInt(i64) },
@@ -209,7 +210,7 @@ pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !wasm.Instr {
 
         opcodes.br_table => .{ .br_table = blk: {
             const n_targets = try self.nextInt(u32);
-            const targets = try allocator.alloc(wasm.LabelIdx, n_targets);
+            const targets = try allocator.alloc(ast.LabelIdx, n_targets);
             errdefer allocator.free(targets);
             for (targets) |*t| t.value = try self.nextInt(u32);
             break :blk .{ targets, .{ .value = try self.nextInt(u32) } };
@@ -219,7 +220,7 @@ pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !wasm.Instr {
         opcodes.loop,
         opcodes.@"if",
         => |code| @unionInit(
-            wasm.Instr,
+            ast.Instr,
             opcodes.shortOpcodeName(code).?,
             try self.nextBlockType(),
         ),
@@ -238,7 +239,7 @@ pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !wasm.Instr {
         opcodes.@"memory.size",
         opcodes.@"memory.grow",
         => |code| @unionInit(
-            wasm.Instr,
+            ast.Instr,
             opcodes.shortOpcodeName(code).?,
             .{ .value = try self.nextInt(u32) },
         ),
@@ -378,7 +379,7 @@ pub fn nextInstr(self: *@This(), allocator: std.mem.Allocator) !wasm.Instr {
         opcodes.@"i64.extend8_s",
         opcodes.@"i64.extend16_s",
         opcodes.@"i64.extend32_s",
-        => |code| @unionInit(wasm.Instr, opcodes.shortOpcodeName(code).?, {}),
+        => |code| @unionInit(ast.Instr, opcodes.shortOpcodeName(code).?, {}),
 
         else => error.UnsupportedOpcode,
     };

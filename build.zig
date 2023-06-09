@@ -1,7 +1,10 @@
 const std = @import("std");
 
+const Allocator = std.mem.Allocator;
+const AutoHashMapUnmanaged = std.AutoHashMapUnmanaged;
 const Build = std.Build;
 const CrossTarget = std.zig.CrossTarget;
+const Module = Build.Module;
 const OptimizeMode = std.builtin.OptimizeMode;
 const Step = Build.Step;
 const Target = std.Target;
@@ -68,13 +71,32 @@ const Configurator = struct {
     target: ?CrossTarget = null,
     optimize_mode: ?OptimizeMode = null,
     run_unit_tests: ?*Step.Run = null,
+    geom_module: ?*Module = null,
+    glfw_libs: AutoHashMapUnmanaged(GlfwOptions, *Step.Compile) = .{},
+    glfw_module: ?*Module = null,
+    freetype_libs: AutoHashMapUnmanaged(FreetypeOptions, *Step.Compile) = .{},
+    freetype_module: ?*Module = null,
+
+    fn getAllocator(self: *const @This()) Allocator {
+        return self.build.allocator;
+    }
+
+    fn getGeomModule(self: *@This()) *Module {
+        if (self.geom_module) |mod| return mod;
+        const mod = self.build.createModule(.{ .source_file = .{ .path = "src/geom/geom.zig" } });
+        self.geom_module = mod;
+        return mod;
+    }
 
     const GlfwOptions = struct {
         target: CrossTarget,
         mode: OptimizeMode,
     };
 
-    fn addGlfw(self: *@This(), options: GlfwOptions) *Step.Compile {
+    fn getGlfwLib(self: *@This(), options: GlfwOptions) *Step.Compile {
+        const slot = self.glfw_libs.getOrPut(self.getAllocator(), options) catch @panic("OOM");
+        if (slot.found_existing) return slot.value_ptr.*;
+
         const glfw_dir = joinComptimePaths(&.{ third_party_dir, "glfw" });
         const include_dir = joinComptimePaths(&.{ glfw_dir, "include" });
         const src_dir = joinComptimePaths(&.{ glfw_dir, "src" });
@@ -132,6 +154,43 @@ const Configurator = struct {
                 "xkb_unicode.c",
             }), &.{});
         }
+
+        slot.value_ptr.* = lib;
+        return lib;
+    }
+
+    fn getGlfwModule(self: *@This()) *Module {
+        if (self.glfw_module) |mod| return mod;
+
+        const mod = self.build.createModule(.{
+            .source_file = .{ .path = "src/glfw/glfw.zig" },
+            .dependencies = &.{.{ .name = "geom", .module = self.getGeomModule() }},
+        });
+
+        self.glfw_module = mod;
+        return mod;
+    }
+
+    const FreetypeOptions = struct {
+        target: CrossTarget,
+        mode: OptimizeMode,
+    };
+
+    fn getFreetypeLib(self: *@This(), options: FreetypeOptions) *Step.Compile {
+        const slot = self.freetype_libs.getOrPut(self.getAllocator(), options) catch @panic("OOM");
+        if (slot.found_existing) return slot.value_ptr.*;
+        @panic("TODO");
+    }
+
+    fn getFreetypeModule(self: *@This()) *Module {
+        if (self.freetype_module) |mod| return mod;
+
+        const mod = self.build.createModule(.{
+            .source_file = .{ .path = "src/freetype/freetype.zig" },
+        });
+
+        self.freetype_module = mod;
+        return mod;
     }
 
     fn addWasmModule(

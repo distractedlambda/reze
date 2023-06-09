@@ -1,192 +1,23 @@
-pub const TypeIdx = packed struct(u32) {
-    value: u32,
+pub const BlockType = union(enum) {
+    immediate: ?ValType,
+    indexed: TypeIdx,
 };
-
-pub const FuncIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const TableIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const MemIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const GlobalIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const ElemIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const DataIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const LocalIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const LabelIdx = packed struct(u32) {
-    value: u32,
-};
-
-pub const LaneIdx = u8;
-
-pub const NumType = enum(u8) {
-    i32 = 0x7f,
-    i64 = 0x7e,
-    f32 = 0x7d,
-    f64 = 0x7c,
-};
-
-pub const VecType = enum(u8) {
-    v128 = 0x7b,
-};
-
-pub const RefType = enum(u8) {
-    funcref = 0x70,
-    externref = 0x6f,
-};
-
-pub const ValType = enum(u8) {
-    i32 = 0x7f,
-    i64 = 0x7e,
-    f32 = 0x7d,
-    f64 = 0x7c,
-    v128 = 0x7b,
-    funcref = 0x70,
-    externref = 0x6f,
-};
-
-pub const ResultType = []const ValType;
-
-pub const FuncType = struct {
-    parameters: ResultType,
-    results: ResultType,
-};
-
-pub const Limits = struct {
-    min: u32,
-    max: ?u32 = null,
-};
-
-pub const MemType = struct {
-    limits: Limits,
-};
-
-pub const TableType = struct {
-    element_type: RefType,
-    limits: Limits,
-};
-
-pub const Mut = enum(u8) {
-    @"const" = 0x00,
-    @"var" = 0x01,
-};
-
-pub const GlobalType = struct {
-    value_type: ValType,
-    mutability: Mut,
-};
-
-pub const MemArg = struct {
-    alignment: u32,
-    offset: u32,
-};
-
-pub const Name = []const u8;
-
-pub const ImportName = struct {
-    module: []const u8,
-    name: []const u8,
-};
-
-fn Imported(comptime Type: type) type {
-    return struct {
-        name: ImportName,
-        type: Type,
-    };
-}
-
-pub const ImportedFunc = Imported(TypeIdx);
-
-pub const ImportedTable = Imported(TableType);
-
-pub const ImportedMem = Imported(MemType);
-
-pub const ImportedGlobal = Imported(GlobalType);
 
 pub const ConstantExpr = union(enum) {
-    i32_const: i32,
-    i64_const: i64,
-    f32_const: u32,
-    f64_const: u64,
-    ref_null: void,
-    ref_func: FuncIdx,
-    global_get: GlobalIdx,
-};
-
-pub const I32ConstantExpr = union(enum) {
-    i32_const: i32,
-    global_get: GlobalIdx,
-};
-
-pub const FuncrefConstantExpr = union(enum) {
-    ref_null: void,
-    ref_func: FuncIdx,
-    global_get: GlobalIdx,
-};
-
-pub const ExternrefConstantExpr = union(enum) {
-    ref_null: void,
-    global_get: GlobalIdx,
-};
-
-pub const Global = struct {
-    type: GlobalType,
-    initial_value: ConstantExpr,
-};
-
-pub const ExportDesc = union(enum) {
-    function: FuncIdx,
-    table: TableIdx,
-    memory: MemIdx,
-    global: GlobalIdx,
-};
-
-pub const Export = struct {
-    name: Name,
-    desc: ExportDesc,
-};
-
-pub const ElemKind = enum(u8) {
-    funcref = 0x00,
-};
-
-pub const Elem = struct {
-    mode: Mode,
-    init: Init,
-
-    pub const Mode = union(enum) {
-        active: Active,
-        passive: void,
-        declarative: void,
-
-        pub const Active = struct {
-            table: TableIdx,
-            offset: I32ConstantExpr,
-        };
-    };
-
-    pub const Init = union(enum) {
-        funcrefs: []const FuncIdx,
-        funcref_exprs: []const FuncrefConstantExpr,
-        externref_exprs: []const ExternrefConstantExpr,
-    };
+    @"i32.const": i32,
+    @"i64.const": i64,
+    @"f32.const": f32,
+    @"f64.const": f64,
+    @"v128.const": u128,
+    @"ref.null": void,
+    @"ref.func": FuncIdx,
+    @"global.get": GlobalIdx,
+    @"i32.add": [2]*ConstantExpr,
+    @"i32.sub": [2]*ConstantExpr,
+    @"i32.mul": [2]*ConstantExpr,
+    @"i64.add": [2]*ConstantExpr,
+    @"i64.sub": [2]*ConstantExpr,
+    @"i64.mul": [2]*ConstantExpr,
 };
 
 pub const Data = struct {
@@ -199,36 +30,95 @@ pub const Data = struct {
 
         pub const Active = struct {
             memory: MemIdx,
-            offset: I32ConstantExpr,
+            offset: ConstantExpr,
         };
     };
 };
 
-pub const SectionId = enum(u8) {
-    custom = 0,
-    type = 1,
-    import = 2,
-    function = 3,
-    table = 4,
-    memory = 5,
-    global = 6,
-    @"export" = 7,
-    start = 8,
-    element = 9,
-    code = 10,
-    data = 11,
-    data_count = 12,
-    _,
+pub const DataIdx = packed struct(u32) { value: u32 };
+
+pub const Elem = struct {
+    mode: Mode,
+    init: Init,
+
+    pub const Mode = union(enum) {
+        active: Active,
+        passive: void,
+        declarative: void,
+
+        pub const Active = struct {
+            table: TableIdx,
+            offset: ConstantExpr,
+        };
+    };
+
+    pub const Init = union(enum) {
+        funcrefs: []const FuncIdx,
+        funcref_exprs: []const ConstantExpr,
+        externref_exprs: []const ConstantExpr,
+    };
 };
 
-pub const Section = struct {
-    id: SectionId,
-    contents: []const u8,
+pub const ElemIdx = packed struct(u32) { value: u32 };
+
+pub const ElemKind = enum(u8) {
+    funcref = 0x00,
 };
 
-pub const BlockType = union(enum) {
-    immediate: ?ValType,
-    indexed: TypeIdx,
+pub const Export = struct {
+    name: Name,
+    desc: ExportDesc,
+};
+
+pub const ExportDesc = union(enum) {
+    func: FuncIdx,
+    table: TableIdx,
+    mem: MemIdx,
+    global: GlobalIdx,
+};
+
+pub const FuncIdx = packed struct(u32) { value: u32 };
+
+pub const FuncType = struct {
+    parameters: ResultType,
+    results: ResultType,
+};
+
+pub const Global = struct {
+    type: GlobalType,
+    init: ConstantExpr,
+};
+
+pub const GlobalIdx = packed struct(u32) { value: u32 };
+
+pub const GlobalType = struct {
+    value_type: ValType,
+    mut: Mut,
+};
+
+pub const ImportedFunc = struct {
+    name: ImportName,
+    type: TypeIdx,
+};
+
+pub const ImportedGlobal = struct {
+    name: ImportName,
+    type: GlobalType,
+};
+
+pub const ImportedMem = struct {
+    name: ImportName,
+    type: MemType,
+};
+
+pub const ImportedTable = struct {
+    name: ImportName,
+    type: TableType,
+};
+
+pub const ImportName = struct {
+    module: []const u8,
+    name: []const u8,
 };
 
 pub const Instr = union(enum) {
@@ -670,10 +560,90 @@ pub const Instr = union(enum) {
     @"f64x2.convert_low_i32x4_u": void,
 };
 
-test {
-    _ = @import("wasm/Decoder.zig");
-}
+pub const LabelIdx = packed struct(u32) { value: u32 };
 
-test "ref all decls" {
-    @import("std").testing.refAllDecls(@This());
-}
+pub const LaneIdx = packed struct(u8) { value: u8 };
+
+pub const Limits = struct {
+    min: u32,
+    max: ?u32 = null,
+};
+
+pub const LocalIdx = packed struct(u32) { value: u32 };
+
+pub const MemArg = struct {
+    alignment: u32,
+    offset: u32,
+};
+
+pub const MemIdx = packed struct(u32) { value: u32 };
+
+pub const MemType = struct {
+    limits: Limits,
+};
+
+pub const Mut = enum(u8) {
+    @"const" = 0x00,
+    @"var" = 0x01,
+};
+
+pub const Name = []const u8;
+
+pub const NumType = enum(u8) {
+    i32 = 0x7f,
+    i64 = 0x7e,
+    f32 = 0x7d,
+    f64 = 0x7c,
+};
+
+pub const RefType = enum(u8) {
+    funcref = 0x70,
+    externref = 0x6f,
+};
+
+pub const ResultType = []const ValType;
+
+pub const Section = struct {
+    id: SectionId,
+    contents: []const u8,
+};
+
+pub const SectionId = enum(u8) {
+    custom = 0,
+    type = 1,
+    import = 2,
+    function = 3,
+    table = 4,
+    memory = 5,
+    global = 6,
+    @"export" = 7,
+    start = 8,
+    element = 9,
+    code = 10,
+    data = 11,
+    data_count = 12,
+    _,
+};
+
+pub const TableIdx = packed struct(u32) { value: u32 };
+
+pub const TableType = struct {
+    element_type: RefType,
+    limits: Limits,
+};
+
+pub const TypeIdx = packed struct(u32) { value: u32 };
+
+pub const ValType = enum(u8) {
+    i32 = 0x7f,
+    i64 = 0x7e,
+    f32 = 0x7d,
+    f64 = 0x7c,
+    v128 = 0x7b,
+    funcref = 0x70,
+    externref = 0x6f,
+};
+
+pub const VecType = enum(u8) {
+    v128 = 0x7b,
+};

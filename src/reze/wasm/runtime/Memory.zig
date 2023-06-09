@@ -1,6 +1,7 @@
 comptime {
-    if (@import("builtin").cpu.arch.endian() != .Little)
+    if (@import("builtin").cpu.arch.endian() != .Little) {
         @compileError("TODO support big-endian");
+    }
 }
 
 const std = @import("std");
@@ -34,11 +35,11 @@ pub fn deinit(self: *@This()) void {
     self.* = undefined;
 }
 
-pub inline fn @"memory.size"(self: *const @This()) u32 {
+pub inline fn size(self: *const @This()) u32 {
     return self.current_pages;
 }
 
-pub fn @"memory.grow"(self: *@This(), delta: u32) u32 {
+pub fn grow(self: *@This(), delta: u32) u32 {
     const err = std.math.maxInt(u32);
 
     const new_pages = std.math.add(
@@ -73,43 +74,11 @@ inline fn translateAddress(
     return self.bytes + effective_address;
 }
 
-inline fn load(self: *const @This(), comptime T: type, addr: u32, offset: u32) !T {
+pub inline fn load(self: *const @This(), comptime T: type, addr: u32, offset: u32) !T {
     return @ptrCast([*]align(1) const T, try self.translateAddress(addr, offset, @sizeOf(T))).*;
 }
 
-inline fn store(self: *const @This(), value: anytype, addr: u32, offset: u32) !void {
+pub inline fn store(self: *const @This(), value: anytype, addr: u32, offset: u32) !void {
     const T = @TypeOf(value);
     @ptrCast([*]align(1) T, try self.translateAddress(addr, offset, @sizeOf(T))).* = value;
-}
-
-pub inline fn @"i32.load"(self: *const @This(), addr: u32, offset: u32) !i32 {
-    return self.load(i32, addr, offset);
-}
-
-pub inline fn @"i64.load"(self: *const @This(), addr: u32, offset: u32) !i64 {
-    return self.load(i64, addr, offset);
-}
-
-pub inline fn @"f32.load"(self: *const @This(), addr: u32, offset: u32) !f32 {
-    return self.load(f32, addr, offset);
-}
-
-pub inline fn @"f64.load"(self: *const @This(), addr: u32, offset: u32) !f64 {
-    return self.load(f64, addr, offset);
-}
-
-pub inline fn @"i32.load8_s"(self: *const @This(), addr: u32, offset: u32) !i32 {
-    return self.load(i8, addr, offset);
-}
-
-pub inline fn @"i32.load8_u"(self: *const @This(), addr: u32, offset: u32) !i32 {
-    return self.load(u8, addr, offset);
-}
-
-pub inline fn @"i32.load16_s"(self: *const @This(), addr: u32, offset: u32) !i32 {
-    return self.load(i16, addr, offset);
-}
-
-pub inline fn @"i32.load16_u"(self: *const @This(), addr: u32, offset: u32) !i32 {
-    return self.load(u16, addr, offset);
 }

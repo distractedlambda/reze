@@ -1,15 +1,11 @@
-const c = @import("c.zig");
-const err = @import("err.zig");
+const c = @import("../c.zig");
+const Aabb = @import("../aabb.zig").Aabb;
+const Ratio = @import("../ratio.zig").Ratio;
 
-const AspectRatio = @import("AspectRatio.zig");
-const ContentScale = @import("ContentScale.zig");
+const err = @import("err.zig");
 const Error = err.Error;
-const FrameSize = @import("FrameSize.zig");
 const Image = @import("Image.zig");
 const Monitor = @import("monitor.zig").Monitor;
-const Pos = @import("Pos.zig");
-const Size = @import("Size.zig");
-const SizeLimits = @import("SizeLimits.zig");
 
 pub const Window = opaque {
     fn glfwWindow(self: *Window) *c.GLFWwindow {
@@ -287,82 +283,70 @@ pub const Window = opaque {
         try err.check();
     }
 
-    pub fn getPos(self: *Window) Error!Pos {
-        var res: Pos = undefined;
-        c.glfwGetWindowPos(self.glfwWindow(), &res.xpos, &res.ypos);
+    pub fn getPos(self: *Window) Error![2]c_int {
+        var result: [2]c_int = undefined;
+        c.glfwGetWindowPos(self.glfwWindow(), &result[0], &result[1]);
         try err.check();
-        return res;
+        return result;
     }
 
-    pub fn setPos(self: *Window, pos: Pos) Error!void {
-        c.glfwSetWindowPos(self.glfwWindow(), pos.xpos, pos.ypos);
+    pub fn setPos(self: *Window, pos: [2]c_int) Error!void {
+        c.glfwSetWindowPos(self.glfwWindow(), pos[0], pos[1]);
         try err.check();
     }
 
-    pub fn getSize(self: *Window) Error!Size {
-        var res: Size = undefined;
-        c.glfwGetWindowSize(self.glfwWindow(), &res.width, &res.height);
+    pub fn getSize(self: *Window) Error![2]c_int {
+        var result: [2]c_int = undefined;
+        c.glfwGetWindowSize(self.glfwWindow(), &result[0], &result[1]);
         try err.check();
-        return res;
+        return result;
     }
 
-    pub fn setSizeLimits(self: *Window, limits: SizeLimits) Error!void {
+    pub fn setSizeLimits(self: *Window, limits: Aabb(2, ?c_int)) Error!void {
         c.glfwSetWindowSizeLimits(
             self.glfwWindow(),
-            limits.min_width orelse c.GLFW_DONT_CARE,
-            limits.min_height orelse c.GLFW_DONT_CARE,
-            limits.max_width orelse c.GLFW_DONT_CARE,
-            limits.max_height orelse c.GLFW_DONT_CARE,
+            limits.min[0] orelse c.GLFW_DONT_CARE,
+            limits.min[1] orelse c.GLFW_DONT_CARE,
+            limits.max[0] orelse c.GLFW_DONT_CARE,
+            limits.max[1] orelse c.GLFW_DONT_CARE,
         );
 
         try err.check();
     }
 
-    pub fn setAspectRatio(self: *Window, ratio: ?AspectRatio) void {
-        const effective_ratio = ratio orelse .{
-            .numer = c.GLFW_DONT_CARE,
-            .denom = c.GLFW_DONT_CARE,
-        };
-
+    pub fn setAspectRatio(self: *Window, ratio: ?Ratio(c_int)) void {
         c.glfwSetWindowAspectRatio(
             self.glfwWindow(),
-            effective_ratio.numer,
-            effective_ratio.denom,
+            if (ratio) |r| r.numerator else c.GLFW_DONT_CARE,
+            if (ratio) |r| r.denominator else c.GLFW_DONT_CARE,
         );
 
         try err.check();
     }
 
-    pub fn setSize(self: *Window, size: Size) Error!void {
-        c.glfwSetWindowSize(self.glfwWindow(), size.width, size.height);
+    pub fn setSize(self: *Window, size: [2]c_int) Error!void {
+        c.glfwSetWindowSize(self.glfwWindow(), size[0], size[1]);
         try err.check();
     }
 
-    pub fn getFramebufferSize(self: *Window) Error!Size {
-        var res: Size = undefined;
-        c.glfwGetFramebufferSize(self.glfwWindow(), &res.width, &res.height);
+    pub fn getFramebufferSize(self: *Window) Error![2]c_int {
+        var result: [2]c_int = undefined;
+        c.glfwGetFramebufferSize(self.glfwWindow(), &result[0], &result[1]);
         try err.check();
-        return res;
+        return result;
     }
 
-    pub fn getFrameSize(self: *Window) Error!FrameSize {
-        var res: FrameSize = undefined;
-        c.glfwGetWindowFrameSize(self.glfwWindow(), &res.left, &res.top, &res.right, &res.bottom);
+    pub fn getContentScale(self: *Window) Error![2]f32 {
+        var result: [2]f32 = undefined;
+        c.glfwGetWindowContentScale(self.glfwWindow(), &result[0], &result[1]);
         try err.check();
-        return res;
-    }
-
-    pub fn getContentScale(self: *Window) Error!ContentScale {
-        var res: ContentScale = undefined;
-        c.glfwGetWindowContentScale(self.glfwWindow(), &res.xscale, &res.yscale);
-        try err.check();
-        return res;
+        return result;
     }
 
     pub fn getOpacity(self: *Window) Error!f32 {
-        const res = c.glfwGetWindowOpacity(self.glfwWindow());
+        const result = c.glfwGetWindowOpacity(self.glfwWindow());
         try err.check();
-        return res;
+        return result;
     }
 
     pub fn setOpacity(self: *Window, opacity: f32) Error!void {
@@ -397,6 +381,57 @@ pub const Window = opaque {
 
     pub fn focus(self: *Window) Error!void {
         c.glfwFocusWindow(self.glfwWindow());
+        try err.check();
+    }
+
+    pub fn requestAttention(self: *Window) Error!void {
+        c.glfwRequestWindowAttention(self.glfwWindow());
+        try err.check();
+    }
+
+    pub fn getMonitor(self: *Window) Error!*Monitor {
+        const result = c.glfwGetWindowMonitor(self.glfwWindow());
+        try err.check();
+        return result.?;
+    }
+
+    pub fn setUserPointer(self: *Window, pointer: ?*anyopaque) Error!void {
+        c.glfwSetWindowUserPointer(self.glfwWindow(), pointer);
+        try err.check();
+    }
+
+    pub fn getUserPointer(self: *Window) Error!?*anyopaque {
+        const result = c.glfwGetWindowUserPointer(self.glfwWindow());
+        try err.check();
+        return result;
+    }
+
+    pub fn swapBuffers(self: *Window) Error!void {
+        c.glfwSwapBuffers(self.glfwWindow());
+        try err.check();
+    }
+
+    pub fn makeContextCurrent(self: *Window) Error!void {
+        c.glfwMakeContextCurrent(self.glfwWindow());
+        try err.check();
+    }
+
+    pub fn setPosCallback(
+        self: *Window,
+        comptime callback: ?fn (window: *Window, pos: [2]c_int) void,
+    ) Error!void {
+        _ = c.glfwSetWindowPosCallback(
+            self.glfwWindow(),
+            if (callback) |cbk|
+                struct {
+                    fn f(window: *c.GFLWwindow, xpos: c_int, ypos: c_int) callconv(.C) void {
+                        cbk(@ptrCast(*Window, window), .{ xpos, ypos });
+                    }
+                }.f
+            else
+                null,
+        );
+
         try err.check();
     }
 };
