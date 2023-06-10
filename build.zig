@@ -56,6 +56,8 @@ const Configurator = struct {
 
         lib.addIncludePath("third_party/glfw/include");
 
+        lib.installHeadersDirectory("third_party/glfw/include", "");
+
         lib.addCSourceFiles(&.{
             "third_party/glfw/src/context.c",
             "third_party/glfw/src/egl_context.c",
@@ -93,32 +95,6 @@ const Configurator = struct {
             }, &.{});
         } else {
             lib.defineCMacro("_GLFW_X11", null);
-
-            lib.addIncludePath("third_party/libx11/include");
-            lib.addIncludePath("third_party/libxext/include");
-            lib.addIncludePath("third_party/libxfixes/include");
-            lib.addIncludePath("third_party/libxi/include");
-            lib.addIncludePath("third_party/libxinerama/include");
-            lib.addIncludePath("third_party/libxrandr/include");
-            lib.addIncludePath("third_party/libxrender/include");
-            lib.addIncludePath("third_party/xorgproto/include");
-
-            lib.addConfigHeader(self.build.addConfigHeader(
-                .{
-                    .style = .{
-                        .autoconf = .{
-                            .path = "third_party/libxcursor/include/X11/Xcursor/Xcursor.h.in",
-                        },
-                    },
-                    .include_path = "X11/Xcursor/Xcursor.h",
-                },
-                .{
-                    .XCURSOR_LIB_MAJOR = 1,
-                    .XCURSOR_LIB_MINOR = 2,
-                    .XCURSOR_LIB_REVISION = 1,
-                },
-            ));
-
             lib.addCSourceFiles(&.{
                 "third_party/glfw/src/glx_context.c",
                 "third_party/glfw/src/linux_joystick.c",
@@ -214,9 +190,10 @@ const Configurator = struct {
             break :blk options.createModule();
         });
 
-        const glfw_lib = self.addGlfw(.{ .target = self.target.?, .mode = self.optimize_mode.? });
-        unit_tests.linkLibrary(glfw_lib);
-        unit_tests.include_dirs.appendSlice(glfw_lib.include_dirs.items) catch @panic("OOM");
+        unit_tests.linkLibrary(self.addGlfw(.{
+            .target = self.target.?,
+            .mode = self.optimize_mode.?,
+        }));
 
         const test_step = self.build.step("test", "Run unit tests");
         test_step.dependOn(&self.build.addRunArtifact(unit_tests).step);
