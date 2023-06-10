@@ -130,6 +130,21 @@ const Configurator = struct {
         const lib = self.createCLib("x11");
         self.x11_lib = lib;
 
+        const config_header = self.build.addConfigHeader(.{
+            .style = .{
+                .autoconf = .{
+                    .path = "third_party/libx11/include/X11/XlibConf.h.in",
+                },
+            },
+            .include_path = "X11/XlibConf.h",
+        }, .{
+            .XTHREADS = 1,
+            .XUSE_MTSAFE_API = 1,
+        });
+
+        lib.addConfigHeader(config_header);
+        // lib.installConfigHeader(config_header, .{});
+
         lib.defineCMacro("USE_THREAD_SAFETY_CONSTRUCTOR", "1");
         lib.defineCMacro("HASSETUGID", "1");
         lib.defineCMacro("HASGETRESUID", "1");
@@ -142,33 +157,39 @@ const Configurator = struct {
         lib.defineCMacro("XKB", "1");
         lib.defineCMacro("COMPOSECACHE", "1");
 
-        lib.defineCMacro("_BSD_SOURCE", null);
+        lib.defineCMacro("_DEFAULT_SOURCE", null);
         lib.defineCMacro("X11_t", null);
         lib.defineCMacro("TRANS_CLIENT", null);
 
-        lib.defineCMacro("XCMSDIR", "/usr/local/share/X11");
+        lib.defineCMacro("XCMSDIR", "\"/usr/local/share/X11\"");
+
+        lib.defineCMacro("HAS_FCHOWN", null);
+        lib.defineCMacro("HAS_STICKY_DIR_BIT", null);
 
         lib.addIncludePath("third_party/libx11/include");
         lib.addIncludePath("third_party/libx11/include/X11");
+        lib.addIncludePath("third_party/libx11/src");
+        lib.addIncludePath("third_party/libx11/src/xcms");
+        lib.addIncludePath("third_party/libx11/src/xkb");
+        lib.addIncludePath("third_party/libx11/src/xlibi18n");
+
+        // lib.installHeadersDirectoryOptions(.{
+        //     .source_dir = "third_party/libx11/include",
+        //     .install_dir = .header,
+        //     .install_subdir = "",
+        //     .exclude_extensions = &.{ ".am", ".gitignore", ".in" },
+        // });
+
         lib.addIncludePath("third_party/xorgproto/include");
-        // lib.addIncludePath("third_party/libx11/src");
-        // lib.addIncludePath("third_party/libx11/src/xcms");
-        // lib.addIncludePath("third_party/libx11/src/xkb");
-        // lib.addIncludePath("third_party/libx11/src/xlibi18n");
 
-        lib.installHeadersDirectoryOptions(.{
-            .source_dir = "third_party/libx11/include",
-            .install_dir = .header,
-            .install_subdir = "",
-            .exclude_extensions = &.{ ".am", ".gitignore", ".in" },
-        });
+        // lib.installHeadersDirectoryOptions(.{
+        //     .source_dir = "third_party/xorgproto/include",
+        //     .install_dir = .header,
+        //     .install_subdir = "",
+        //     .exclude_extensions = &.{".build"},
+        // });
 
-        lib.installHeadersDirectoryOptions(.{
-            .source_dir = "third_party/xorgproto/include",
-            .install_dir = .header,
-            .install_subdir = "",
-            .exclude_extensions = &.{ ".build" },
-        });
+        lib.addIncludePath("third_party/libxtrans");
 
         lib.addCSourceFiles(&.{
             "third_party/libx11/src/AllCells.c",
@@ -631,7 +652,6 @@ const Configurator = struct {
         test_step.dependOn(&self.build.addRunArtifact(unit_tests).step);
     }
 };
-
 
 pub fn build(b: *Build) void {
     var configurator = Configurator.init(b);

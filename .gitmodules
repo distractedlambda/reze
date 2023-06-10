@@ -10,3 +10,6 @@
 [submodule "third_party/xorgproto"]
 	path = third_party/xorgproto
 	url = https://gitlab.freedesktop.org/xorg/proto/xorgproto.git
+[submodule "third_party/libxtrans/X11/Xtrans"]
+	path = third_party/libxtrans/X11/Xtrans
+	url = https://gitlab.freedesktop.org/xorg/lib/libxtrans.git
