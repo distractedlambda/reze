@@ -1,6 +1,5 @@
 const c = @import("../c.zig");
 const Aabb = @import("../aabb.zig").Aabb;
-const Ratio = @import("../ratio.zig").Ratio;
 
 const err = @import("err.zig");
 const Error = err.Error;
@@ -314,11 +313,11 @@ pub const Window = opaque {
         try err.check();
     }
 
-    pub fn setAspectRatio(self: *Window, ratio: ?Ratio(c_int)) Error!void {
+    pub fn setAspectRatio(self: *Window, ratio: ?[2]c_int) Error!void {
         c.glfwSetWindowAspectRatio(
             self.glfwWindow(),
-            if (ratio) |r| r.numerator else c.GLFW_DONT_CARE,
-            if (ratio) |r| r.denominator else c.GLFW_DONT_CARE,
+            if (ratio) |r| r[0] else c.GLFW_DONT_CARE,
+            if (ratio) |r| r[1] else c.GLFW_DONT_CARE,
         );
 
         try err.check();
