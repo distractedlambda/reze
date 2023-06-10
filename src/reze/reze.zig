@@ -1,5 +1,3 @@
-const build_options = @import("build_options");
-
 pub const aabb = @import("aabb.zig");
 pub const extent = @import("extent.zig");
 pub const freetype = @import("freetype/freetype.zig");
@@ -15,14 +13,8 @@ pub const FixedPoint = scaled_int.FixedPoint;
 pub const ScaledInt = scaled_int.ScaledInt;
 
 test {
-    if (build_options.use_glfw) {
-        _ = glfw;
-    }
-
-    if (build_options.use_freetype) {
-        _ = freetype;
-    }
-
+    _ = glfw;
+    _ = freetype;
     _ = aabb;
     _ = extent;
     _ = scaled_int;
