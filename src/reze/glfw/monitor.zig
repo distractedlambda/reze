@@ -1,40 +1,48 @@
-const c = @import("../c.zig");
 const Extent = @import("../extent.zig").Extent;
 
 const err = @import("err.zig");
 const Error = err.Error;
 
 pub const Monitor = opaque {
-    fn glfwMonitor(self: *Monitor) *c.GLFWmonitor {
-        return @ptrCast(*c.GLFWmonitor, self);
-    }
+    extern fn glfwGetMonitors(count: *c_int) ?[*]const *Monitor;
 
     pub fn getAll() Error![]const *Monitor {
         var count: c_int = undefined;
-        const glfw_monitors = c.glfwGetMonitors(&count);
+        const monitors = glfwGetMonitors(&count);
         try err.check();
-        const monitors = @ptrCast([*]const *Monitor, glfw_monitors orelse return &.{});
-        return monitors[0..@intCast(usize, count)];
+        return (monitors orelse return &.{})[0..@intCast(usize, count)];
     }
+
+    extern fn glfwGetPrimaryMonitor() ?*Monitor;
 
     pub fn getPrimary() Error!?*Monitor {
-        const glfw_monitor = c.glfwGetPrimaryMonitor();
-        try err.check();
-        return @ptrCast(?*Monitor, glfw_monitor);
-    }
-
-    pub fn getPos(self: *Monitor) Error![2]c_int {
-        var result: [2]c_int = undefined;
-        c.glfwGetMonitorPos(self.glfwMonitor(), &result[0], &result[1]);
+        const result = glfwGetPrimaryMonitor();
         try err.check();
         return result;
     }
 
+    extern fn glfwGetMonitorPos(monitor: *Monitor, xpos: *c_int, ypos: *c_int) void;
+
+    pub fn getPos(self: *Monitor) Error![2]c_int {
+        var result: [2]c_int = undefined;
+        glfwGetMonitorPos(self, &result[0], &result[1]);
+        try err.check();
+        return result;
+    }
+
+    extern fn glfwGetMonitorWorkarea(
+        monitor: *Monitor,
+        xpos: *c_int,
+        ypos: *c_int,
+        width: *c_int,
+        height: *c_int,
+    ) void;
+
     pub fn getWorkarea(self: *Monitor) Error!Extent(2, c_int) {
         var result: Extent(2, c_int) = undefined;
 
-        c.glfwGetMonitorWorkarea(
-            self.glfwMonitor(),
+        glfwGetMonitorWorkarea(
+            self,
             &result.start[0],
             &result.start[1],
             &result.size[0],
@@ -46,24 +54,30 @@ pub const Monitor = opaque {
         return result;
     }
 
+    extern fn glfwGetMonitorPhysicalSize(monitor: *Monitor, widthMM: *c_int, heightMM: *c_int) void;
+
     pub fn getPhysicalSize_mm(self: *Monitor) Error![2]c_int {
         var result: [2]c_int = undefined;
-        c.glfwGetMonitorPhysicalSize(self.glfwMonitor(), &result[0], &result[1]);
+        glfwGetMonitorPhysicalSize(self, &result[0], &result[1]);
         try err.check();
         return result;
     }
+
+    extern fn glfwGetMonitorContentScale(monitor: *Monitor, xscale: *f32, yscale: *f32) void;
 
     pub fn getContentScale(self: *Monitor) Error![2]f32 {
         var result: [2]f32 = undefined;
-        c.glfwGetMonitorContentScale(self.glfwMonitor(), &result[0], &result[1]);
+        glfwGetMonitorContentScale(self, &result[0], &result[1]);
         try err.check();
         return result;
     }
 
+    extern fn glfwGetMonitorName(monitor: *Monitor) ?[*:0]const u8;
+
     pub fn getName(self: *Monitor) Error![*:0]const u8 {
-        const name = c.glfwGetMonitorName(self.glfwMonitor());
+        const result = glfwGetMonitorName(self);
         try err.check();
-        return name.?;
+        return result.?;
     }
 
     test {

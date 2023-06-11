@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const c = @import("../c.zig");
-
 pub const Error = error{
     NotInitialized,
     NoCurrentContext,
@@ -16,25 +14,27 @@ pub const Error = error{
     UnknownGlfwError,
 };
 
+extern fn glfwGetError(description: ?*?[*:0]const u8) c_int;
+
 pub fn check() Error!void {
     var message: ?[*:0]const u8 = undefined;
-    const code = c.glfwGetError(&message);
-    if (code != c.GLFW_NO_ERROR) return raise(code, message.?);
+    const code = glfwGetError(&message);
+    if (code != 0) return raise(code, message.?);
 }
 
 fn raise(code: c_int, message: [*:0]const u8) Error {
     std.log.scoped(.glfw).err("{s}", .{message});
     return switch (code) {
-        c.GLFW_NOT_INITIALIZED => error.NotInitialized,
-        c.GLFW_NO_CURRENT_CONTEXT => error.NoCurrentContext,
-        c.GLFW_INVALID_ENUM => error.InvalidEnum,
-        c.GLFW_INVALID_VALUE => error.InvalidValue,
-        c.GLFW_OUT_OF_MEMORY => error.OutOfMemory,
-        c.GLFW_API_UNAVAILABLE => error.ApiUnavailable,
-        c.GLFW_VERSION_UNAVAILABLE => error.VersionUnavailable,
-        c.GLFW_PLATFORM_ERROR => error.PlatformError,
-        c.GLFW_FORMAT_UNAVAILABLE => error.FormatUnavailable,
-        c.GLFW_NO_WINDOW_CONTEXT => error.NoWindowContext,
+        0x00010001 => error.NotInitialized,
+        0x00010002 => error.NoCurrentContext,
+        0x00010003 => error.InvalidEnum,
+        0x00010004 => error.InvalidValue,
+        0x00010005 => error.OutOfMemory,
+        0x00010006 => error.ApiUnavailable,
+        0x00010007 => error.VersionUnavailable,
+        0x00010008 => error.PlatformError,
+        0x00010009 => error.FormatUnavailable,
+        0x0001000A => error.NoWindowContext,
         else => error.UnknownGlfwError,
     };
 }
