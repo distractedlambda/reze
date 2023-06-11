@@ -4,36 +4,3 @@
 [submodule "third_party/glfw"]
 	path = third_party/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "third_party/libx11"]
-	path = third_party/libx11
-	url = https://gitlab.freedesktop.org/xorg/lib/libx11.git
-[submodule "third_party/xorgproto"]
-	path = third_party/xorgproto
-	url = https://gitlab.freedesktop.org/xorg/proto/xorgproto.git
-[submodule "third_party/libxtrans/X11/Xtrans"]
-	path = third_party/libxtrans/X11/Xtrans
-	url = https://gitlab.freedesktop.org/xorg/lib/libxtrans.git
-[submodule "third_party/libxcursor"]
-	path = third_party/libxcursor
-	url = https://gitlab.freedesktop.org/xorg/lib/libxcursor.git
-[submodule "third_party/libxrandr"]
-	path = third_party/libxrandr
-	url = https://gitlab.freedesktop.org/xorg/lib/libxrandr.git
-[submodule "third_party/libxrender"]
-	path = third_party/libxrender
-	url = https://gitlab.freedesktop.org/xorg/lib/libxrender.git
-[submodule "third_party/libxinerama"]
-	path = third_party/libxinerama
-	url = https://gitlab.freedesktop.org/xorg/lib/libxinerama.git
-[submodule "third_party/libxi"]
-	path = third_party/libxi
-	url = https://gitlab.freedesktop.org/xorg/lib/libxi.git
-[submodule "third_party/libxext"]
-	path = third_party/libxext
-	url = https://gitlab.freedesktop.org/xorg/lib/libxext.git
-[submodule "third_party/libxfixes"]
-	path = third_party/libxfixes
-	url = https://gitlab.freedesktop.org/xorg/lib/libxfixes.git
-[submodule "third_party/libxcb"]
-	path = third_party/libxcb
-	url = https://gitlab.freedesktop.org/xorg/lib/libxcb.git
