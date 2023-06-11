@@ -131,8 +131,6 @@ const Configurator = struct {
 
         lib.addIncludePath("third_party/glfw/include");
 
-        lib.installHeadersDirectory("third_party/glfw/include", "");
-
         lib.addCSourceFiles(&.{
             "third_party/glfw/src/context.c",
             "third_party/glfw/src/init.c",
@@ -195,6 +193,65 @@ const Configurator = struct {
         return lib;
     }
 
+    fn addFreetype(self: *Configurator) *Step.Compile {
+        if (self.freetype_lib) |it| return it;
+        const lib = self.createCLib("freetype");
+        self.freetype_lib = lib;
+
+        lib.addIncludePath("third_party/freetype/include");
+
+        lib.defineCMacro("FT2_BUILD_LIBRARY", null);
+
+        lib.addCSourceFiles(&.{
+            "third_party/freetype/src/autofit/autofit.c",
+            "third_party/freetype/src/base/ftbase.c",
+            "third_party/freetype/src/base/ftbbox.c",
+            "third_party/freetype/src/base/ftbdf.c",
+            "third_party/freetype/src/base/ftbitmap.c",
+            "third_party/freetype/src/base/ftcid.c",
+            "third_party/freetype/src/base/ftdebug.c",
+            "third_party/freetype/src/base/ftfstype.c",
+            "third_party/freetype/src/base/ftgasp.c",
+            "third_party/freetype/src/base/ftglyph.c",
+            "third_party/freetype/src/base/ftgxval.c",
+            "third_party/freetype/src/base/ftinit.c",
+            "third_party/freetype/src/base/ftmac.c",
+            "third_party/freetype/src/base/ftmm.c",
+            "third_party/freetype/src/base/ftotval.c",
+            "third_party/freetype/src/base/ftpatent.c",
+            "third_party/freetype/src/base/ftpfr.c",
+            "third_party/freetype/src/base/ftstroke.c",
+            "third_party/freetype/src/base/ftsynth.c",
+            "third_party/freetype/src/base/ftsystem.c",
+            "third_party/freetype/src/base/fttype1.c",
+            "third_party/freetype/src/base/ftwinfnt.c",
+            "third_party/freetype/src/bdf/bdf.c",
+            "third_party/freetype/src/bzip2/ftbzip2.c",
+            "third_party/freetype/src/cache/ftcache.c",
+            "third_party/freetype/src/cff/cff.c",
+            "third_party/freetype/src/cid/type1cid.c",
+            "third_party/freetype/src/gxvalid/gxvalid.c",
+            "third_party/freetype/src/gzip/ftgzip.c",
+            "third_party/freetype/src/lzw/ftlzw.c",
+            "third_party/freetype/src/otvalid/otvalid.c",
+            "third_party/freetype/src/pcf/pcf.c",
+            "third_party/freetype/src/pfr/pfr.c",
+            "third_party/freetype/src/psaux/psaux.c",
+            "third_party/freetype/src/pshinter/pshinter.c",
+            "third_party/freetype/src/psnames/psnames.c",
+            "third_party/freetype/src/raster/raster.c",
+            "third_party/freetype/src/sdf/sdf.c",
+            "third_party/freetype/src/sfnt/sfnt.c",
+            "third_party/freetype/src/smooth/smooth.c",
+            "third_party/freetype/src/truetype/truetype.c",
+            "third_party/freetype/src/type1/type1.c",
+            "third_party/freetype/src/type42/type42.c",
+            "third_party/freetype/src/winfonts/winfnt.c",
+        }, &.{});
+
+        return lib;
+    }
+
     fn configureBuild(self: *Configurator) void {
         const unit_tests = self.build.addTest(.{
             .root_source_file = .{ .path = "src/reze/reze.zig" },
@@ -203,6 +260,7 @@ const Configurator = struct {
         });
 
         unit_tests.linkLibrary(self.addGlfw());
+        unit_tests.linkLibrary(self.addFreetype());
 
         const test_step = self.build.step("test", "Run unit tests");
         test_step.dependOn(&self.build.addRunArtifact(unit_tests).step);
