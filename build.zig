@@ -137,6 +137,8 @@ const Configurator = struct {
 
         lib.addIncludePath("third_party/glfw/include");
 
+        lib.installHeadersDirectory("third_party/glfw/include", "");
+
         lib.addCSourceFiles(&.{
             "third_party/glfw/src/context.c",
             "third_party/glfw/src/init.c",
@@ -205,6 +207,8 @@ const Configurator = struct {
         self.freetype_lib = lib;
 
         lib.addIncludePath("third_party/freetype/include");
+
+        lib.installHeadersDirectory("third_party/freetype/include", "");
 
         lib.defineCMacro("FT2_BUILD_LIBRARY", null);
 
@@ -382,6 +386,114 @@ const Configurator = struct {
         if (self.fontconfig_lib) |it| return it;
         const lib = self.createCLib("fontconfig");
         self.fontconfig_lib = lib;
+
+        lib.linkLibrary(self.addFreetype());
+        lib.linkLibrary(self.addExpat());
+
+        const default_fonts_dirs = self.build.option(
+            []const []const u8,
+            "fontconfig_default_fonts_dirs",
+            "",
+        ) orelse if (self.target.isWindows())
+            &.{ "WINDOWSFONTDIR", "WINDOWSUSERFONTDIR" }
+        else if (self.target_info.target.isDarwin())
+            &.{
+                "/System/Library/Fonts",
+                "/Library/Fonts",
+                "~/Library/Fonts",
+                "/System/Library/Assets/com_apple_MobileAsset_Font3",
+                "/System/Library/Assets/com_apple_MobileAsset_Font4",
+            }
+        else
+            &.{ "/usr/share/fonts", "/usr/local/share/fonts" };
+
+        const additional_fonts_dirs = self.build.option(
+            []const []const u8,
+            "fontconfig_additional_fonts_dirs",
+            "",
+        ) orelse if (self.target.isWindows() or self.target.isDarwin())
+            &.{}
+        else
+            &.{ "/usr/X11R6/lib/X11/fonts", "/usr/X11/lib/X11/fonts", "/usr/lib/X11/fonts" };
+
+        const config_header = self.build.addConfigHeader(.{
+            .include_path = "fontconfig/config.h",
+        }, .{
+            .HAVE_DIRENT_H = 1,
+            .HAVE_FCNTL_H = 1,
+            .HAVE_STDLIB_H = 1,
+            .HAVE_STRING_H = 1,
+            .HAVE_UNISTD_H = 1,
+            .HAVE_SYS_STATVFS_H = 1,
+            .HAVE_SYS_VFS_H = 1,
+            .HAVE_SYS_STATFS_H = 1,
+            .HAVE_SYS_PARAM_H = 1,
+            .HAVE_SYS_MOUNT_H = 1,
+
+            .HAVE_LINK = 1,
+            .HAVE_MKSTEMP = 1,
+            .HAVE_MKOSTEMP = 1,
+            .HAVE__MKTEMP_S = 1,
+            .HAVE_MKDTEMP = 1,
+            .HAVE_GETOPT = 1,
+            .HAVE_GETOPT_LONG = 1,
+            .HAVE_GETPROGNAME = 1,
+            .HAVE_GETEXECNAME = 1,
+            .HAVE_RAND = 1,
+            .HAVE_RANDOM = 1,
+            .HAVE_LRAND48 = 1,
+            .HAVE_RANDOM_R = 1,
+            .HAVE_RAND_R = 1,
+            .HAVE_READLINK = 1,
+            .HAVE_FSTATVFS = 1,
+            .HAVE_FSTATFS = 1,
+            .HAVE_LSTAT = 1,
+            .HAVE_MMAP = 1,
+            .HAVE_VPRINTF = 1,
+
+            .HAVE_FT_GET_BDF_PROPERTY = 1,
+            .HAVE_FT_GET_PS_FONT_INFO = 1,
+            .HAVE_FT_HAS_PS_GLYPH_NAMES = 1,
+            .HAVE_FT_GET_X11_FONT_FORMAT = 1,
+            .HAVE_FT_DONE_MM_VAR = 1,
+
+            .HAVE_POSIX_FADVISE = 1,
+
+            .HAVE_STRUCT_STATVFS_F_BASETYPE = 1,
+            .HAVE_STRUCT_STATVFS_F_FSTYPENAME = 1,
+            .HAVE_STRUCT_STATFS_F_FLAGS = 1,
+            .HAVE_STRUCT_STATFS_F_FSTYPENAME = 1,
+            .HAVE_STRUCT_DIRENT_D_TYPE = 1,
+
+            .SIZEOF_VOID_P = @divExact(self.target_info.target.ptrBitWidth(), 8),
+            .ALIGNOF_VOID_P = @divExact(self.target_info.target.ptrBitWidth(), 8),
+            .ALIGNOF_DOUBLE = self.target_info.target.c_type_alignment(.double),
+
+            .FLEXIBLE_ARRAY_MEMBER = true, // FIXME: wut's up with the meson.build here?
+
+            .HAVE_STDATOMIC_PRIMITIVES = 1,
+            .HAVE_INTEL_ATOMIC_PRIMITIVES = null,
+            .HAVE_SOLARIS_ATOMIC_OPS = null,
+
+            .FC_DEFAULT_FONTS = blk: {
+                var s: []const u8 = "";
+                for (default_fonts_dirs) |d| s = self.build.fmt("\\t<dir>{s}</dir>\\n", .{d});
+                break :blk s;
+            },
+
+            .FC_FONTPATH = blk: {
+                var s: []const u8 = "";
+                for (additional_fonts_dirs) |d| s = self.build.fmt("\\t<dir>{s}</dir>\\n", .{d});
+                break :blk s;
+            },
+
+            .HAVE_PTHREAD = definedIf(!self.target.isWindows()),
+        });
+
+        lib.addConfigHeader(config_header);
+        lib.installConfigHeader(config_header, .{});
+
+        lib.defineCMacro("HAVE_CONFIG_H", null);
 
         return lib;
     }
