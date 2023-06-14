@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const runtime = @import("runtime.zig");
-
 context: *anyopaque,
 vtable: *const VTable,
 
