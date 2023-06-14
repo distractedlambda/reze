@@ -1,4 +1,6 @@
-const Extent = @import("../extent.zig").Extent;
+const common = @import("common");
+
+const Extent = common.Extent;
 
 const err = @import("err.zig");
 const Error = err.Error;

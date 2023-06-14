@@ -1,4 +1,6 @@
-const Aabb = @import("../aabb.zig").Aabb;
+const common = @import("common");
+
+const Aabb = common.Aabb;
 
 const err = @import("err.zig");
 const Error = err.Error;

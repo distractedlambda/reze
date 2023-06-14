@@ -126,7 +126,7 @@ pub fn build(b: *Build) void {
     freetype_module.registerUnitTests(target, optimize_mode);
 
     const objc_module = ZigModule.create(b, "objc");
-    objc_module.addNativeDependency(NativeDependency.createSystemFramework(b, "objc"));
+    objc_module.addNativeDependency(NativeDependency.createSystemLibrary(b, "objc"));
     if (target.isDarwin()) objc_module.registerUnitTests(target, optimize_mode);
 
     const wasm_module = ZigModule.create(b, "wasm");
@@ -515,6 +515,11 @@ const ZigModule = struct {
         });
 
         for (self.native_dependencies.items) |d| d.apply(tests);
+
+        {
+            var i = self.module.dependencies.iterator();
+            while (i.next()) |e| tests.addModule(e.key_ptr.*, e.value_ptr.*);
+        }
 
         const run_tests = b.addRunArtifact(tests);
 
