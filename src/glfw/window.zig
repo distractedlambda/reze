@@ -1,31 +1,30 @@
 const common = @import("common");
+const std = @import("std");
 
 const Aabb = common.Aabb;
 
+const c = @import("c.zig");
 const err = @import("err.zig");
 const Error = err.Error;
-const Image = @import("Image.zig");
 const Monitor = @import("monitor.zig").Monitor;
 
 pub const Window = opaque {
-    extern fn glfwDefaultWindowHints() void;
+    inline fn toC(self: *Window) *c.GLFWwindow {
+        return @ptrCast(*c.GLFWwindow, self);
+    }
 
     fn defaultWindowHints() Error!void {
-        glfwDefaultWindowHints();
+        c.glfwDefaultWindowHints();
         try err.check();
     }
-
-    extern fn glfwWindowHint(hint: c_int, value: c_int) void;
 
     fn windowHint(hint: c_int, value: c_int) Error!void {
-        glfwWindowHint(hint, value);
+        c.glfwWindowHint(hint, value);
         try err.check();
     }
 
-    extern fn glfwWindowHintString(hint: c_int, value: [*:0]const u8) void;
-
     fn windowHintString(hint: c_int, value: [*:0]const u8) Error!void {
-        glfwWindowHintString(hint, value);
+        c.glfwWindowHintString(hint, value);
         try err.check();
     }
 
@@ -79,261 +78,229 @@ pub const Window = opaque {
         x11_instance_name: ?[*:0]const u8 = null,
 
         pub const ClientApi = enum(c_int) {
-            none = 0,
-            opengl = 0x00030001,
-            opengl_es = 0x00030002,
+            none = c.GLFW_NO_API,
+            opengl = c.GLFW_OPENGL_API,
+            opengl_es = c.GLFW_OPENGL_ES_API,
         };
 
         pub const ContextCreationApi = enum(c_int) {
-            native = 0x00036001,
-            egl = 0x00036002,
-            osmesa = 0x00036003,
+            native = c.GLFW_NATIVE_CONTEXT_API,
+            egl = c.GLFW_EGL_CONTEXT_API,
+            osmesa = c.GLFW_OSMESA_CONTEXT_API,
         };
 
         pub const OpenGLProfile = enum(c_int) {
-            any = 0,
-            core = 0x00032001,
-            compat = 0x00032002,
+            any = c.GLFW_OPENGL_ANY_PROFILE,
+            core = c.GLFW_OPENGL_CORE_PROFILE,
+            compat = c.GLFW_OPENGL_COMPAT_PROFILE,
         };
 
         pub const ContextRobustness = enum(c_int) {
-            none = 0,
-            no_reset_notification = 0x00031001,
-            lose_context_on_reset = 0x00031002,
+            none = c.GLFW_NO_ROBUSTNESS,
+            no_reset_notification = c.GLFW_NO_RESET_NOTIFICATION,
+            lose_context_on_reset = c.GLFW_LOSE_CONTEXT_ON_RESET,
         };
 
         pub const ContextReleaseBehavior = enum(c_int) {
-            any = 0,
-            flush = 0x00035001,
-            none = 0x00035002,
+            any = c.GLFW_ANY_RELEASE_BEHAVIOR,
+            flush = c.GLFW_RELEASE_BEHAVIOR_FLUSH,
+            none = c.GLFW_RELEASE_BEHAVIOR_NONE,
         };
     };
-
-    extern fn glfwCreateWindow(
-        width: c_int,
-        height: c_int,
-        title: [*:0]const u8,
-        monitor: ?*Monitor,
-        share: ?*Window,
-    ) ?*Window;
 
     pub fn create(options: CreateOptions) Error!*Window {
         try defaultWindowHints();
 
         if (options.focused) |v|
-            try windowHint(0x00020001, @boolToInt(v));
+            try windowHint(c.GLFW_FOCUSED, @boolToInt(v));
 
         if (options.auto_iconify) |v|
-            try windowHint(0x00020006, @boolToInt(v));
+            try windowHint(c.GLFW_AUTO_ICONIFY, @boolToInt(v));
 
         if (options.resizable) |v|
-            try windowHint(0x00020003, @boolToInt(v));
+            try windowHint(c.GLFW_RESIZABLE, @boolToInt(v));
 
         if (options.visible) |v|
-            try windowHint(0x00020004, @boolToInt(v));
+            try windowHint(c.GLFW_VISIBLE, @boolToInt(v));
 
         if (options.decorated) |v|
-            try windowHint(0x00020005, @boolToInt(v));
+            try windowHint(c.GLFW_DECORATED, @boolToInt(v));
 
         if (options.auto_iconify) |v|
-            try windowHint(0x00020006, @boolToInt(v));
+            try windowHint(c.GLFW_AUTO_ICONIFY, @boolToInt(v));
 
         if (options.floating) |v|
-            try windowHint(0x00020007, @boolToInt(v));
+            try windowHint(c.GLFW_FLOATING, @boolToInt(v));
 
         if (options.maximized) |v|
-            try windowHint(0x00020008, @boolToInt(v));
+            try windowHint(c.GLFW_MAXIMIZED, @boolToInt(v));
 
         if (options.center_cursor) |v|
-            try windowHint(0x00020009, @boolToInt(v));
+            try windowHint(c.GLFW_CENTER_CURSOR, @boolToInt(v));
 
         if (options.transparent_framebuffer) |v|
-            try windowHint(0x0002000A, @boolToInt(v));
+            try windowHint(c.GLFW_TRANSPARENT_FRAMEBUFFER, @boolToInt(v));
 
         if (options.focus_on_show) |v|
-            try windowHint(0x0002000C, @boolToInt(v));
+            try windowHint(c.GLFW_FOCUS_ON_SHOW, @boolToInt(v));
 
         if (options.red_bits) |v|
-            try windowHint(0x00021001, v);
+            try windowHint(c.GLFW_RED_BITS, v);
 
         if (options.green_bits) |v|
-            try windowHint(0x00021002, v);
+            try windowHint(c.GLFW_GREEN_BITS, v);
 
         if (options.blue_bits) |v|
-            try windowHint(0x00021003, v);
+            try windowHint(c.GLFW_BLUE_BITS, v);
 
         if (options.alpha_bits) |v|
-            try windowHint(0x00021004, v);
+            try windowHint(c.GLFW_ALPHA_BITS, v);
 
         if (options.depth_bits) |v|
-            try windowHint(0x00021005, v);
+            try windowHint(c.GLFW_DEPTH_BITS, v);
 
         if (options.stencil_bits) |v|
-            try windowHint(0x00021006, v);
+            try windowHint(c.GLFW_STENCIL_BITS, v);
 
         if (options.accum_red_bits) |v|
-            try windowHint(0x00021007, v);
+            try windowHint(c.GLFW_ACCUM_RED_BITS, v);
 
         if (options.accum_green_bits) |v|
-            try windowHint(0x00021008, v);
+            try windowHint(c.GLFW_ACCUM_GREEN_BITS, v);
 
         if (options.accum_blue_bits) |v|
-            try windowHint(0x00021009, v);
+            try windowHint(c.GLFW_ACCUM_BLUE_BITS, v);
 
         if (options.accum_alpha_bits) |v|
-            try windowHint(0x0002100A, v);
+            try windowHint(c.GLFW_ACCUM_ALPHA_BITS, v);
 
         if (options.aux_buffers) |v|
-            try windowHint(0x0002100B, v);
+            try windowHint(c.GLFW_AUX_BUFFERS, v);
 
         if (options.stereo) |v|
-            try windowHint(0x0002100C, @boolToInt(v));
+            try windowHint(c.GLFW_STEREO, @boolToInt(v));
 
         if (options.samples) |v|
-            try windowHint(0x0002100D, v);
+            try windowHint(c.GLFW_SAMPLES, v);
 
         if (options.srgb_capable) |v|
-            try windowHint(0x0002100E, @boolToInt(v));
+            try windowHint(c.GLFW_SRGB_CAPABLE, @boolToInt(v));
 
         if (options.refresh_rate) |v|
-            try windowHint(0x0002100F, v);
+            try windowHint(c.GLFW_REFRESH_RATE, v);
 
         if (options.doublebuffer) |v|
-            try windowHint(0x00021010, @boolToInt(v));
+            try windowHint(c.GLFW_DOUBLEBUFFER, @boolToInt(v));
 
         if (options.client_api) |v|
-            try windowHint(0x00022001, @enumToInt(v));
+            try windowHint(c.GLFW_CLIENT_API, @enumToInt(v));
 
         if (options.context_version_major) |v|
-            try windowHint(0x00022002, v);
+            try windowHint(c.GLFW_CONTEXT_VERSION_MAJOR, v);
 
         if (options.context_version_minor) |v|
-            try windowHint(0x00022003, v);
+            try windowHint(c.GLFW_CONTEXT_VERSION_MINOR, v);
 
         if (options.context_robustness) |v|
-            try windowHint(0x00022005, @enumToInt(v));
+            try windowHint(c.GLFW_CONTEXT_ROBUSTNESS, @enumToInt(v));
 
         if (options.opengl_forward_compat) |v|
-            try windowHint(0x00022006, @boolToInt(v));
+            try windowHint(c.GLFW_OPENGL_FORWARD_COMPAT, @boolToInt(v));
 
         if (options.opengl_debug_context) |v|
-            try windowHint(0x00022007, @boolToInt(v));
+            try windowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, @boolToInt(v));
 
         if (options.opengl_profile) |v|
-            try windowHint(0x00022008, @enumToInt(v));
+            try windowHint(c.GLFW_OPENGL_PROFILE, @enumToInt(v));
 
         if (options.context_release_behavior) |v|
-            try windowHint(0x00022009, @enumToInt(v));
+            try windowHint(c.GLFW_CONTEXT_RELEASE_BEHAVIOR, @enumToInt(v));
 
         if (options.context_no_error) |v|
-            try windowHint(0x0002200A, @boolToInt(v));
+            try windowHint(c.GLFW_CONTEXT_NO_ERROR, @boolToInt(v));
 
         if (options.context_creation_api) |v|
-            try windowHint(0x0002200B, @enumToInt(v));
+            try windowHint(c.GLFW_CONTEXT_CREATION_API, @enumToInt(v));
 
         if (options.scale_to_monitor) |v|
-            try windowHint(0x0002200C, @boolToInt(v));
+            try windowHint(c.GLFW_SCALE_TO_MONITOR, @boolToInt(v));
 
         if (options.cocoa_retina_framebuffer) |v|
-            try windowHint(0x00023001, @boolToInt(v));
+            try windowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, @boolToInt(v));
 
         if (options.cocoa_frame_name) |v|
-            try windowHintString(0x00023002, v);
+            try windowHintString(c.GLFW_COCOA_FRAME_NAME, v);
 
         if (options.cocoa_graphics_switching) |v|
-            try windowHint(0x00023003, @boolToInt(v));
+            try windowHint(c.GLFW_COCOA_GRAPHICS_SWITCHING, @boolToInt(v));
 
         if (options.x11_class_name) |v|
-            try windowHintString(0x00024001, v);
+            try windowHintString(c.GLFW_X11_CLASS_NAME, v);
 
         if (options.x11_instance_name) |v|
-            try windowHintString(0x00024002, v);
+            try windowHintString(c.GLFW_X11_INSTANCE_NAME, v);
 
-        const glfw_window = glfwCreateWindow(
+        const window = c.glfwCreateWindow(
             options.width,
             options.height,
             options.title,
-            options.monitor,
-            options.share,
+            @ptrCast(?*c.GLFWmonitor, options.monitor),
+            @ptrCast(?*c.GLFWwindow, options.share),
         );
 
         try err.check();
 
-        return @ptrCast(*Window, glfw_window);
+        return @ptrCast(*Window, window);
     }
-
-    extern fn glfwDestroyWindow(window: *Window) void;
 
     pub fn destroy(self: *Window) Error!void {
-        glfwDestroyWindow(self);
+        c.glfwDestroyWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwWindowShouldClose(window: *Window) c_int;
 
     pub fn shouldClose(self: *Window) Error!bool {
-        const result = glfwWindowShouldClose(self);
+        const result = c.glfwWindowShouldClose(self.toC());
         try err.check();
-        return result != 0;
+        return result != c.GLFW_FALSE;
     }
-
-    extern fn glfwSetWindowShouldClose(window: *Window, value: c_int) void;
 
     pub fn setShouldClose(self: *Window, value: bool) Error!void {
-        glfwSetWindowShouldClose(self, @boolToInt(value));
+        c.glfwSetWindowShouldClose(self.toC(), @boolToInt(value));
         try err.check();
     }
-
-    extern fn glfwSetWindowTitle(window: *Window, title: [*:0]const u8) void;
 
     pub fn setTitle(self: *Window, value: [*:0]const u8) Error!void {
-        glfwSetWindowTitle(self, value);
+        c.glfwSetWindowTitle(self.toC(), value);
         try err.check();
     }
 
-    extern fn glfwSetWindowIcon(window: *Window, count: c_int, images: [*]const Image) void;
-
-    pub fn setIcon(self: *Window, images: []const Image) Error!void {
-        glfwSetWindowIcon(self, @intCast(c_int, images.len), images.ptr);
+    pub fn setIcon(self: *Window, images: []const c.GLFWimage) Error!void {
+        c.glfwSetWindowIcon(self.toC(), @intCast(c_int, images.len), images.ptr);
         try err.check();
     }
-
-    extern fn glfwGetWindowPos(window: *Window, xpos: *c_int, ypos: *c_int) void;
 
     pub fn getPos(self: *Window) Error![2]c_int {
         var result: [2]c_int = undefined;
-        glfwGetWindowPos(self, &result[0], &result[1]);
+        c.glfwGetWindowPos(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    extern fn glfwSetWindowPos(window: *Window, xpos: c_int, ypos: c_int) void;
-
     pub fn setPos(self: *Window, pos: [2]c_int) Error!void {
-        glfwSetWindowPos(self, pos[0], pos[1]);
+        c.glfwSetWindowPos(self.toC(), pos[0], pos[1]);
         try err.check();
     }
-
-    extern fn glfwGetWindowSize(window: *Window, width: *c_int, height: *c_int) void;
 
     pub fn getSize(self: *Window) Error![2]c_int {
         var result: [2]c_int = undefined;
-        glfwGetWindowSize(self, &result[0], &result[1]);
+        c.glfwGetWindowSize(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    extern fn glfwSetWindowSizeLimits(
-        window: *Window,
-        minwidth: c_int,
-        minheight: c_int,
-        maxwidth: c_int,
-        maxheight: c_int,
-    ) void;
-
     pub fn setSizeLimits(self: *Window, limits: Aabb(2, ?c_int)) Error!void {
-        glfwSetWindowSizeLimits(
-            self,
+        c.glfwSetWindowSizeLimits(
+            self.toC(),
             limits.min[0] orelse -1,
             limits.min[1] orelse -1,
             limits.max[0] orelse -1,
@@ -343,11 +310,9 @@ pub const Window = opaque {
         try err.check();
     }
 
-    extern fn glfwSetWindowAspectRatio(window: *Window, numer: c_int, denom: c_int) void;
-
     pub fn setAspectRatio(self: *Window, ratio: ?[2]c_int) Error!void {
-        glfwSetWindowAspectRatio(
-            self,
+        c.glfwSetWindowAspectRatio(
+            self.toC(),
             if (ratio) |r| r[0] else -1,
             if (ratio) |r| r[1] else -1,
         );
@@ -355,179 +320,99 @@ pub const Window = opaque {
         try err.check();
     }
 
-    extern fn glfwSetWindowSize(window: *Window, width: c_int, height: c_int) void;
-
     pub fn setSize(self: *Window, size: [2]c_int) Error!void {
-        glfwSetWindowSize(self, size[0], size[1]);
+        c.glfwSetWindowSize(self.toC(), size[0], size[1]);
         try err.check();
     }
-
-    extern fn glfwGetFramebufferSize(window: *Window, width: *c_int, height: *c_int) void;
 
     pub fn getFramebufferSize(self: *Window) Error![2]c_int {
         var result: [2]c_int = undefined;
-        glfwGetFramebufferSize(self, &result[0], &result[1]);
+        c.glfwGetFramebufferSize(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
-
-    extern fn glfwGetWindowContentScale(window: *Window, xscale: *f32, yscale: *f32) void;
 
     pub fn getContentScale(self: *Window) Error![2]f32 {
         var result: [2]f32 = undefined;
-        glfwGetWindowContentScale(self, &result[0], &result[1]);
+        c.glfwGetWindowContentScale(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
-
-    extern fn glfwGetWindowOpacity(window: *Window) f32;
 
     pub fn getOpacity(self: *Window) Error!f32 {
-        const result = glfwGetWindowOpacity(self);
+        const result = c.glfwGetWindowOpacity(self.toC());
         try err.check();
         return result;
     }
-
-    extern fn glfwSetWindowOpacity(window: *Window, opacity: f32) void;
 
     pub fn setOpacity(self: *Window, opacity: f32) Error!void {
-        glfwSetWindowOpacity(self, opacity);
+        c.glfwSetWindowOpacity(self.toC(), opacity);
         try err.check();
     }
-
-    extern fn glfwIconifyWindow(window: *Window) void;
 
     pub fn iconify(self: *Window) Error!void {
-        glfwIconifyWindow(self);
+        c.glfwIconifyWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwRestoreWindow(window: *Window) void;
 
     pub fn restore(self: *Window) Error!void {
-        glfwRestoreWindow(self);
+        c.glfwRestoreWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwMaximizeWindow(window: *Window) void;
 
     pub fn maximize(self: *Window) Error!void {
-        glfwMaximizeWindow(self);
+        c.glfwMaximizeWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwShowWindow(window: *Window) void;
 
     pub fn show(self: *Window) Error!void {
-        glfwShowWindow(self);
+        c.glfwShowWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwHideWindow(window: *Window) void;
 
     pub fn hide(self: *Window) Error!void {
-        glfwHideWindow(self);
+        c.glfwHideWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwFocusWindow(window: *Window) void;
 
     pub fn focus(self: *Window) Error!void {
-        glfwFocusWindow(self);
+        c.glfwFocusWindow(self.toC());
         try err.check();
     }
-
-    extern fn glfwRequestWindowAttention(window: *Window) void;
 
     pub fn requestAttention(self: *Window) Error!void {
-        glfwRequestWindowAttention(self);
+        c.glfwRequestWindowAttention(self.toC());
         try err.check();
     }
-
-    extern fn glfwGetWindowMonitor(window: *Window) ?*Monitor;
 
     pub fn getMonitor(self: *Window) Error!?*Monitor {
-        const result = glfwGetWindowMonitor(self);
+        const result = c.glfwGetWindowMonitor(self.toC());
         try err.check();
-        return result;
+        return @ptrCast(?*Monitor, result);
     }
-
-    extern fn glfwSetWindowUserPointer(window: *Window, pointer: ?*anyopaque) void;
 
     pub fn setUserPointer(self: *Window, pointer: ?*anyopaque) Error!void {
-        glfwSetWindowUserPointer(self, pointer);
+        c.glfwSetWindowUserPointer(self.toC(), pointer);
         try err.check();
     }
-
-    extern fn glfwGetWindowUserPointer(window: *Window) ?*anyopaque;
 
     pub fn getUserPointer(self: *Window) Error!?*anyopaque {
-        const result = glfwGetWindowUserPointer(self);
+        const result = c.glfwGetWindowUserPointer(self.toC());
         try err.check();
         return result;
     }
-
-    extern fn glfwSwapBuffers(window: *Window) void;
 
     pub fn swapBuffers(self: *Window) Error!void {
-        glfwSwapBuffers(self);
+        c.glfwSwapBuffers(self.toC());
         try err.check();
     }
-
-    extern fn glfwMakeContextCurrent(window: *Window) void;
 
     pub fn makeContextCurrent(self: *Window) Error!void {
-        glfwMakeContextCurrent(self);
+        c.glfwMakeContextCurrent(self.toC());
         try err.check();
-    }
-
-    pub const WindowPosFun = *const fn (
-        window: *Window,
-        xpos: c_int,
-        ypos: c_int,
-    ) callconv(.C) void;
-
-    extern fn glfwSetWindowPosCallback(window: *Window, callback: ?WindowPosFun) ?WindowPosFun;
-
-    pub fn setPosCallback(self: *Window, callback: ?WindowPosFun) Error!?WindowPosFun {
-        const result = glfwSetWindowPosCallback(self, callback);
-        try err.check();
-        return result;
-    }
-
-    test {
-        _ = &create;
-        _ = &destroy;
-        _ = &focus;
-        _ = &getContentScale;
-        _ = &getFramebufferSize;
-        _ = &getMonitor;
-        _ = &getOpacity;
-        _ = &getPos;
-        _ = &getSize;
-        _ = &getUserPointer;
-        _ = &hide;
-        _ = &iconify;
-        _ = &makeContextCurrent;
-        _ = &maximize;
-        _ = &requestAttention;
-        _ = &restore;
-        _ = &setAspectRatio;
-        _ = &setIcon;
-        _ = &setOpacity;
-        _ = &setPos;
-        _ = &setPosCallback;
-        _ = &setShouldClose;
-        _ = &setSize;
-        _ = &setSizeLimits;
-        _ = &setTitle;
-        _ = &setUserPointer;
-        _ = &shouldClose;
-        _ = &show;
-        _ = &swapBuffers;
     }
 };
 
 test {
-    _ = Window;
+    std.testing.refAllDecls(Window);
 }

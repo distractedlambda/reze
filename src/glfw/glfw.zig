@@ -1,16 +1,14 @@
 const std = @import("std");
 
+const c = @import("c.zig");
 const err = @import("err.zig");
 
 pub const Error = err.Error;
-pub const Image = @import("Image.zig");
 pub const Monitor = @import("monitor.zig").Monitor;
 pub const Window = @import("window.zig").Window;
 
-extern fn glfwInitHint(hint: c_int, value: c_int) void;
-
 fn initHint(hint: c_int, value: c_int) Error!void {
-    glfwInitHint(hint, value);
+    c.glfwInitHint(hint, value);
     try err.check();
 }
 
@@ -20,111 +18,83 @@ pub const InitOptions = struct {
     cocoa_menubar: ?bool = null,
 };
 
-extern fn glfwInit() c_int;
-
 pub fn init(options: InitOptions) Error!void {
     if (options.joystick_hat_buttons) |v|
-        try initHint(0x00050001, @boolToInt(v));
+        try initHint(c.GLFW_JOYSTICK_HAT_BUTTONS, @boolToInt(v));
 
     if (options.cocoa_chdir_resources) |v|
-        try initHint(0x00051001, @boolToInt(v));
+        try initHint(c.GLFW_COCOA_CHDIR_RESOURCES, @boolToInt(v));
 
     if (options.cocoa_menubar) |v|
-        try initHint(0x00051002, @boolToInt(v));
+        try initHint(c.GLFW_COCOA_MENUBAR, @boolToInt(v));
 
-    if (glfwInit() == 0) {
+    if (c.glfwInit() == c.GLFW_FALSE) {
         try err.check();
         unreachable;
     }
 }
 
-extern fn glfwTerminate() void;
-
-pub const terminate = glfwTerminate;
-
-extern fn glfwPollEvents() void;
+pub const terminate = c.glfwTerminate;
 
 pub fn pollEvents() Error!void {
-    glfwPollEvents();
+    c.glfwPollEvents();
     try err.check();
 }
-
-extern fn glfwWaitEvents() void;
-
-extern fn glfwWaitEventsTimeout(timeout: f64) void;
 
 pub fn waitEvents(timeout_s: ?f64) Error!void {
-    if (timeout_s) |t| glfwWaitEventsTimeout(t) else glfwWaitEvents();
+    if (timeout_s) |t| c.glfwWaitEventsTimeout(t) else c.glfwWaitEvents();
     try err.check();
 }
-
-extern fn glfwPostEmptyEvent() void;
 
 pub fn postEmptyEvent() Error!void {
-    glfwPostEmptyEvent();
+    c.glfwPostEmptyEvent();
     try err.check();
 }
-
-extern fn glfwGetCurrentContext() ?*Window;
 
 pub fn getCurrentContext() Error!?*Window {
-    const result = glfwGetCurrentContext();
+    const window = c.glfwGetCurrentContext();
     try err.check();
-    return result;
+    return @ptrCast(?*Window, window);
 }
-
-extern fn glfwSwapInterval(interval: c_int) void;
 
 pub fn swapInterval(interval: c_int) Error!void {
-    glfwSwapInterval(interval);
+    c.glfwSwapInterval(interval);
     try err.check();
 }
-
-extern fn glfwExtensionSupported(extension: [*:0]const u8) c_int;
 
 pub fn extensionSupported(extension: [*:0]const u8) Error!bool {
-    const result = glfwExtensionSupported(extension);
+    const result = c.glfwExtensionSupported(extension);
     try err.check();
-    return result != 0;
+    return result != c.GLFW_FALSE;
 }
 
-extern fn glfwGetProcAddress(procname: [*:0]const u8) ?*const anyopaque;
-
 pub fn getProcAddress(procname: [*:0]const u8) Error!?*const anyopaque {
-    const result = glfwGetProcAddress(procname);
+    const result = c.glfwGetProcAddress(procname);
     try err.check();
     return result;
 }
 
-extern fn glfwVulkanSupported() c_int;
-
 pub fn vulkanSupported() Error!bool {
-    const result = glfwVulkanSupported();
+    const result = c.glfwVulkanSupported();
     try err.check();
-    return result != 0;
+    return result != c.GLFW_FALSE;
 }
-
-extern fn glfwGetRequiredInstanceExtensions(count: *u32) ?[*]const [*:0]const u8;
 
 pub fn getRequiredInstanceExtensions() Error![]const [*:0]const u8 {
     var count: u32 = undefined;
-    const extensions = glfwGetRequiredInstanceExtensions(&count);
+    const extensions = c.glfwGetRequiredInstanceExtensions(&count);
     try err.check();
-    return extensions.?[0..count];
+    return @ptrCast([*]const [*:0]const u8, extensions)[0..count];
 }
 
-extern fn glfwGetTime() f64;
-
 pub fn getTime() Error!f64 {
-    const result = glfwGetTime();
+    const result = c.glfwGetTime();
     try err.check();
     return result;
 }
 
-extern fn glfwSetTime(time: f64) void;
-
 pub fn setTime(time_s: f64) Error!void {
-    glfwSetTime(time_s);
+    c.glfwSetTime(time_s);
     try err.check();
 }
 
