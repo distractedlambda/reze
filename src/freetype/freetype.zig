@@ -1,336 +1,53 @@
+const common = @import("common");
 const std = @import("std");
 
-const FixedPoint = @import("../scaled_int.zig").FixedPoint;
+const c = @import("c.zig");
+const err = @import("err.zig");
+pub const Error = err.Error;
 
-pub const Error = error{
-    CannotOpenResource,
-    UnknownFileFormat,
-    InvalidFileFormat,
-    InvalidVersion,
-    LowerModuleVersion,
-    InvalidArgument,
-    UnimplementedFeature,
-    InvalidTable,
-    InvalidOffset,
-    ArrayTooLarge,
-    MissingModule,
-    MissingProperty,
-    InvalidGlyphIndex,
-    InvalidCharacterCode,
-    InvalidGlyphFormat,
-    CannotRenderGlyph,
-    InvalidOutline,
-    InvalidComposite,
-    TooManyHints,
-    InvalidPixelSize,
-    InvalidSVGDocument,
-    InvalidHandle,
-    InvalidLibraryHandle,
-    InvalidDriverHandle,
-    InvalidFaceHandle,
-    InvalidSizeHandle,
-    InvalidSlotHandle,
-    InvalidCharMapHandle,
-    InvalidCacheHandle,
-    InvalidStreamHandle,
-    TooManyDrivers,
-    TooManyExtensions,
-    OutOfMemory,
-    UnlistedObject,
-    CannotOpenStream,
-    InvalidStreamSeek,
-    InvalidStreamSkip,
-    InvalidStreamRead,
-    InvalidStreamOperation,
-    InvalidFrameOperation,
-    NestedFrameAccess,
-    InvalidFrameRead,
-    RasterUninitialized,
-    RasterCorrupted,
-    RasterOverflow,
-    RasterNegativeHeight,
-    TooManyCaches,
-    InvalidOpcode,
-    TooFewArguments,
-    StackOverflow,
-    CodeOverflow,
-    BadArgument,
-    DivideByZero,
-    InvalidReference,
-    DebugOpCode,
-    ENDFInExecStream,
-    NestedDEFS,
-    InvalidCodeRange,
-    ExecutionTooLong,
-    TooManyFunctionDefs,
-    TooManyInstructionDefs,
-    TableMissing,
-    HorizHeaderMissing,
-    LocationsMissing,
-    NameTableMissing,
-    CMapTableMissing,
-    HmtxTableMissing,
-    PostTableMissing,
-    InvalidHorizMetrics,
-    InvalidCharMapFormat,
-    InvalidPPem,
-    InvalidVertMetrics,
-    CouldNotFindContext,
-    InvalidPostTableFormat,
-    InvalidPostTable,
-    DEFInGlyfBytecode,
-    MissingBitmap,
-    MissingSVGHooks,
-    SyntaxError,
-    StackUnderflow,
-    Ignore,
-    NoUnicodeGlyphName,
-    GlyphTooBig,
-    MissingStartfontField,
-    MissingFontField,
-    MissingSizeField,
-    MissingFontboundingboxField,
-    MissingCharsField,
-    MissingStartcharField,
-    MissingEncodingField,
-    MissingBbxField,
-    BbxTooBig,
-    CorruptedFontHeader,
-    CorruptedFontGlyphs,
-};
-
-fn checkError(code: c_int) Error!void {
-    if (code != 0) return raiseError(code);
-}
-
-extern fn FT_Error_String(error_code: c_int) ?[*:0]const u8;
-
-fn raiseError(code: c_int) Error {
-    if (FT_Error_String(code)) |s| std.log.scoped(.freetype).err("{s}", .{s});
-    return switch (code) {
-        0x01 => error.CannotOpenResource,
-        0x02 => error.UnknownFileFormat,
-        0x03 => error.InvalidFileFormat,
-        0x04 => error.InvalidVersion,
-        0x05 => error.LowerModuleVersion,
-        0x06 => error.InvalidArgument,
-        0x07 => error.UnimplementedFeature,
-        0x08 => error.InvalidTable,
-        0x09 => error.InvalidOffset,
-        0x0A => error.ArrayTooLarge,
-        0x0B => error.MissingModule,
-        0x0C => error.MissingProperty,
-        0x10 => error.InvalidGlyphIndex,
-        0x11 => error.InvalidCharacterCode,
-        0x12 => error.InvalidGlyphFormat,
-        0x13 => error.CannotRenderGlyph,
-        0x14 => error.InvalidOutline,
-        0x15 => error.InvalidComposite,
-        0x16 => error.TooManyHints,
-        0x17 => error.InvalidPixelSize,
-        0x18 => error.InvalidSVGDocument,
-        0x20 => error.InvalidHandle,
-        0x21 => error.InvalidLibraryHandle,
-        0x22 => error.InvalidDriverHandle,
-        0x23 => error.InvalidFaceHandle,
-        0x24 => error.InvalidSizeHandle,
-        0x25 => error.InvalidSlotHandle,
-        0x26 => error.InvalidCharMapHandle,
-        0x27 => error.InvalidCacheHandle,
-        0x28 => error.InvalidStreamHandle,
-        0x30 => error.TooManyDrivers,
-        0x31 => error.TooManyExtensions,
-        0x40 => error.OutOfMemory,
-        0x41 => error.UnlistedObject,
-        0x51 => error.CannotOpenStream,
-        0x52 => error.InvalidStreamSeek,
-        0x53 => error.InvalidStreamSkip,
-        0x54 => error.InvalidStreamRead,
-        0x55 => error.InvalidStreamOperation,
-        0x56 => error.InvalidFrameOperation,
-        0x57 => error.NestedFrameAccess,
-        0x58 => error.InvalidFrameRead,
-        0x60 => error.RasterUninitialized,
-        0x61 => error.RasterCorrupted,
-        0x62 => error.RasterOverflow,
-        0x63 => error.RasterNegativeHeight,
-        0x70 => error.TooManyCaches,
-        0x80 => error.InvalidOpcode,
-        0x81 => error.TooFewArguments,
-        0x82 => error.StackOverflow,
-        0x83 => error.CodeOverflow,
-        0x84 => error.BadArgument,
-        0x85 => error.DivideByZero,
-        0x86 => error.InvalidReference,
-        0x87 => error.DebugOpCode,
-        0x88 => error.ENDFInExecStream,
-        0x89 => error.NestedDEFS,
-        0x8A => error.InvalidCodeRange,
-        0x8B => error.ExecutionTooLong,
-        0x8C => error.TooManyFunctionDefs,
-        0x8D => error.TooManyInstructionDefs,
-        0x8E => error.TableMissing,
-        0x8F => error.HorizHeaderMissing,
-        0x90 => error.LocationsMissing,
-        0x91 => error.NameTableMissing,
-        0x92 => error.CMapTableMissing,
-        0x93 => error.HmtxTableMissing,
-        0x94 => error.PostTableMissing,
-        0x95 => error.InvalidHorizMetrics,
-        0x96 => error.InvalidCharMapFormat,
-        0x97 => error.InvalidPPem,
-        0x98 => error.InvalidVertMetrics,
-        0x99 => error.CouldNotFindContext,
-        0x9A => error.InvalidPostTableFormat,
-        0x9B => error.InvalidPostTable,
-        0x9C => error.DEFInGlyfBytecode,
-        0x9D => error.MissingBitmap,
-        0x9E => error.MissingSVGHooks,
-        0xA0 => error.SyntaxError,
-        0xA1 => error.StackUnderflow,
-        0xA2 => error.Ignore,
-        0xA3 => error.NoUnicodeGlyphName,
-        0xA4 => error.GlyphTooBig,
-        0xB0 => error.MissingStartfontField,
-        0xB1 => error.MissingFontField,
-        0xB2 => error.MissingSizeField,
-        0xB3 => error.MissingFontboundingboxField,
-        0xB4 => error.MissingCharsField,
-        0xB5 => error.MissingStartcharField,
-        0xB6 => error.MissingEncodingField,
-        0xB7 => error.MissingBbxField,
-        0xB8 => error.BbxTooBig,
-        0xB9 => error.CorruptedFontHeader,
-        0xBA => error.CorruptedFontGlyphs,
-        else => error.UnknownFreetypeError,
-    };
-}
-
-fn makeTag(chars: *const [4]u8) u32 {
-    return std.mem.readIntBig(u32, chars);
-}
-
-pub const Vector = extern struct {
-    x: c_long,
-    y: c_long,
-};
-
-pub const Bbox = extern struct {
-    x_min: c_long,
-    y_min: c_long,
-    x_max: c_long,
-    y_max: c_long,
-};
-
-pub const Matrix = extern struct {
-    xx: c_long,
-    xy: c_long,
-    yx: c_long,
-    yy: c_long,
-};
-
-pub const UnitVector = extern struct {
-    x: c_short,
-    y: c_short,
-};
-
-pub const Data = extern struct {
-    pointer: ?[*]const u8,
-    length: c_uint,
-};
-
-pub const Generic = extern struct {
-    data: ?*anyopaque,
-    finalizer: ?Finalizer,
-
-    pub const Finalizer = *const fn (?*anyopaque) callconv(.C) void;
-};
-
-pub const Bitmap = extern struct {
-    rows: c_uint,
-    width: c_int,
-    pitch: c_int,
-    buffer: [*]u8,
-    num_grays: c_ushort,
-    pixel_mode: PixelMode,
-    palette_mode: u8,
-    palette: ?*anyopaque,
-};
+const FixedPoint = common.FixedPoint;
 
 pub const PixelMode = enum(u8) {
-    none,
-    mono,
-    gray,
-    gray2,
-    gray4,
-    lcd,
-    lcd_v,
-    bgra,
+    none = c.FT_PIXEL_MODE_NONE,
+    mono = c.FT_PIXEL_MODE_MONO,
+    gray = c.FT_PIXEL_MODE_GRAY,
+    gray2 = c.FT_PIXEL_MODE_GRAY2,
+    gray4 = c.FT_PIXEL_MODE_GRAY4,
+    lcd = c.FT_PIXEL_MODE_LCD,
+    lcd_v = c.FT_PIXEL_MODE_LCD_V,
+    bgra = c.FT_PIXEL_MODE_BGRA,
     _,
 };
 
-pub const BitmapSize = extern struct {
-    height: c_short,
-    width: c_short,
-    size: c_long,
-    x_ppem: c_long,
-    y_ppem: c_long,
-};
-
-pub const CharMap = extern struct {
-    face: *Face,
-    encoding: Encoding,
-    platform_id: c_ushort,
-    encoding_id: c_ushort,
-};
-
-pub const Encoding = enum(u32) {
-    ms_symbol = makeTag("symb"),
-    unicode = makeTag("unic"),
-    sjis = makeTag("sjis"),
-    prc = makeTag("gb  "),
-    big5 = makeTag("big5"),
-    wansung = makeTag("wans"),
-    johab = makeTag("joha"),
-    adobe_standard = makeTag("ADOB"),
-    adobe_expert = makeTag("ADBE"),
-    adobe_custom = makeTag("ADBC"),
-    adobe_latin_1 = makeTag("lat1"),
-    old_latin_2 = makeTag("lat2"),
-    apple_roman = makeTag("armn"),
+pub const Encoding = enum(c_int) {
+    ms_symbol = c.FT_ENCODING_MS_SYMBOL,
+    unicode = c.FT_ENCODING_UNICODE,
+    sjis = c.FT_ENCODING_SJIS,
+    prc = c.FT_ENCODING_PRC,
+    big5 = c.FT_ENCODING_BIG5,
+    wansung = c.FT_ENCODING_WANSUNG,
+    johab = c.FT_ENCODING_JOHAB,
+    adobe_standard = c.FT_ENCODING_ADOBE_STANDARD,
+    adobe_expert = c.FT_ENCODING_ADOBE_EXPERT,
+    adobe_custom = c.FT_ENCODING_ADOBE_CUSTOM,
+    adobe_latin_1 = c.FT_ENCODING_ADOBE_LATIN_1,
+    old_latin_2 = c.FT_ENCODING_OLD_LATIN_2,
+    apple_roman = c.FT_ENCODING_APPLE_ROMAN,
     _,
-};
-
-pub const Memory = extern struct {
-    user: ?*anyopaque,
-    alloc: AllocFunc,
-    free: FreeFunc,
-    realloc: ReallocFunc,
-
-    pub const AllocFunc = *const fn (*Memory, size: c_long) callconv(.C) ?*anyopaque;
-
-    pub const FreeFunc = *const fn (*Memory, block: ?*anyopaque) callconv(.C) void;
-
-    pub const ReallocFunc = *const fn (
-        *Memory,
-        cur_size: c_long,
-        new_size: c_long,
-        block: ?*anyopaque,
-    ) callconv(.C) ?*anyopaque;
 };
 
 pub const c_memory = blk: {
     const fns = struct {
-        fn alloc(_: *Memory, size: c_long) callconv(.C) ?*anyopaque {
+        fn alloc(_: *c.FT_MemoryRec_, size: c_long) callconv(.C) ?*anyopaque {
             return std.c.malloc(@intCast(usize, size));
         }
 
-        fn free(_: *Memory, block: ?*anyopaque) callconv(.C) void {
+        fn free(_: *c.FT_MemoryRec_, block: ?*anyopaque) callconv(.C) void {
             std.c.free(block);
         }
 
         fn realloc(
-            _: *Memory,
+            _: *c.FT_MemoryRec_,
             _: c_long,
             new_size: c_long,
             block: ?*anyopaque,
@@ -339,7 +56,7 @@ pub const c_memory = blk: {
         }
     };
 
-    break :blk Memory{
+    break :blk c.FT_MemoryRec_{
         .user = null,
         .alloc = &fns.alloc,
         .free = &fns.free,
@@ -352,10 +69,10 @@ const OpenArgs = extern struct {
     memory_base: ?[*]const u8 = null,
     memory_size: c_long = 0,
     pathname: ?[*:0]const u8 = null,
-    stream: ?*Stream = null,
-    driver: ?*Module = null,
+    stream: ?*c.FT_StreamRec = null,
+    driver: ?*c.FT_ModuleRec_ = null,
     num_params: c_int = 0,
-    params: ?[*]const Parameter = null,
+    params: ?[*]const c.FT_Parameter = null,
 
     const Flags = packed struct(c_uint) {
         memory: bool = false,
@@ -393,7 +110,7 @@ const OpenArgs = extern struct {
         }
     }
 
-    fn fillInParams(self: *OpenArgs, params: []const Parameter) void {
+    fn fillInParams(self: *OpenArgs, params: []const c.FT_Parameter) void {
         if (params.len != 0) {
             self.flags.params = true;
             self.num_params = @intCast(c_int, params.len);
@@ -402,45 +119,9 @@ const OpenArgs = extern struct {
     }
 };
 
-pub const Parameter = extern struct {
-    tag: c_ulong,
-    data: ?*anyopaque,
-};
-
-pub const Stream = extern struct {
-    base: ?[*]u8,
-    size: c_ulong,
-    pos: c_ulong,
-
-    descriptor: Desc,
-    pathname: Desc,
-    read: IoFunc,
-    close: CloseFunc,
-
-    memory: ?*Memory,
-    cursor: ?[*]u8,
-    limit: ?[*]u8,
-
-    pub const Desc = extern union {
-        value: c_long,
-        pointer: ?*anyopaque,
-    };
-
-    pub const IoFunc = *const fn (
-        *Stream,
-        offset: c_ulong,
-        buffer: ?[*]u8,
-        count: c_ulong,
-    ) callconv(.C) c_ulong;
-
-    pub const CloseFunc = *const fn (*Stream) callconv(.C) void;
-};
-
-pub const Module = opaque {};
-
 pub const FaceSource = union(enum) {
     memory: []const u8,
-    stream: *Stream,
+    stream: *c.FT_StreamRec,
     path: [*:0]const u8,
 };
 
