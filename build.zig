@@ -12,16 +12,21 @@ pub fn build(b: *Build) void {
     const pm_freetype = context.projectModule("freetype");
     pm_freetype.addMixedModule("common", pm_common);
     pm_freetype.linkSystemLibrary("freetype2");
+    pm_freetype.linkLibC();
 
     const pm_glfw = context.projectModule("glfw");
     pm_glfw.addMixedModule("common", pm_common);
     pm_glfw.linkSystemLibrary("glfw3");
+    pm_glfw.linkLibC();
 
     const pm_wasm = context.projectModule("wasm");
     _ = pm_wasm;
 
     const pm_wasmrt = context.projectModule("wasmrt");
     _ = pm_wasmrt;
+
+    const app_hello_glfw = context.addApp("hello_glfw");
+    pm_glfw.addTo(app_hello_glfw, "glfw");
 
     if (context.target.isDarwin()) {
         const pm_objc = context.projectModule("objc");

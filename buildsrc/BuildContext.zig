@@ -26,6 +26,19 @@ pub fn create(builder: *Build) *@This() {
     return self;
 }
 
+pub fn addApp(self: *@This(), name: []const u8) *Step.Compile {
+    const app = self.builder.addExecutable(.{
+        .name = name,
+        .root_source_file = .{ .path = self.builder.fmt("src/apps/{s}/main.zig", .{name}) },
+        .target = self.target,
+        .optimize = self.optimize,
+    });
+
+    self.builder.installArtifact(app);
+
+    return app;
+}
+
 pub fn projectModule(self: *@This(), name: []const u8) *MixedModule {
     const slot = self.project_modules.getOrPut(
         self.builder.allocator,
@@ -63,6 +76,7 @@ pub fn addProjectModuleUnitTests(self: *@This()) void {
         }
 
         const run_tests = self.builder.addRunArtifact(tests);
+        run_tests.skip_foreign_checks = true;
 
         self.builder.step(
             tests_name,
