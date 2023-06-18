@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const common = @import("common");
+const pointeeCast = common.pointeeCast;
+
 const c = @import("c.zig");
 const err = @import("err.zig");
 
@@ -54,7 +57,7 @@ pub fn postEmptyEvent() Error!void {
 pub fn getCurrentContext() Error!?*Window {
     const window = c.glfwGetCurrentContext();
     try err.check();
-    return @ptrCast(?*Window, window);
+    return pointeeCast(Window, window);
 }
 
 pub fn swapInterval(interval: c_int) Error!void {

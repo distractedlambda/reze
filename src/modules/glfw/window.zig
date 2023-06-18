@@ -1,7 +1,8 @@
-const common = @import("common");
 const std = @import("std");
 
+const common = @import("common");
 const Aabb = common.Aabb;
+const pointeeCast = common.pointeeCast;
 
 const c = @import("c.zig");
 const err = @import("err.zig");
@@ -9,8 +10,8 @@ const Error = err.Error;
 const Monitor = @import("monitor.zig").Monitor;
 
 pub const Window = opaque {
-    inline fn toC(self: *Window) *c.GLFWwindow {
-        return @ptrCast(*c.GLFWwindow, self);
+    fn toC(self: anytype) @TypeOf(pointeeCast(c.GLFWwindow, self)) {
+        return pointeeCast(c.GLFWwindow, self);
     }
 
     fn defaultWindowHints() Error!void {
@@ -250,7 +251,7 @@ pub const Window = opaque {
 
         try err.check();
 
-        return @ptrCast(*Window, window);
+        return pointeeCast(Window, window.?);
     }
 
     pub fn destroy(self: *Window) Error!void {

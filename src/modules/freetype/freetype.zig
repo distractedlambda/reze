@@ -1,11 +1,14 @@
-const common = @import("common");
 const std = @import("std");
 
 const c = @import("c.zig");
 const err = @import("err.zig");
 pub const Error = err.Error;
 
+const common = @import("common");
 const FixedPoint = common.FixedPoint;
+const pointeeCast = common.pointeeCast;
+
+pub const F26Dot6 = FixedPoint(.signed, 26, 6);
 
 pub const PixelMode = enum(u8) {
     none = c.FT_PIXEL_MODE_NONE,
@@ -64,329 +67,127 @@ pub const c_memory = blk: {
     };
 };
 
-const OpenArgs = extern struct {
-    flags: Flags = .{},
-    memory_base: ?[*]const u8 = null,
-    memory_size: c_long = 0,
-    pathname: ?[*:0]const u8 = null,
-    stream: ?*c.FT_StreamRec = null,
-    driver: ?*c.FT_ModuleRec_ = null,
-    num_params: c_int = 0,
-    params: ?[*]const c.FT_Parameter = null,
-
-    const Flags = packed struct(c_uint) {
-        memory: bool = false,
-        stream: bool = false,
-        pathname: bool = false,
-        driver: bool = false,
-        params: bool = false,
-        _reserved: std.meta.Int(.unsigned, @bitSizeOf(c_uint) - 5),
-    };
-
-    fn fillInSource(self: *OpenArgs, source: FaceSource) void {
-        switch (source) {
-            .memory => |m| {
-                self.flags.memory = true;
-                self.memory_base = m.ptr;
-                self.memory_size = @intCast(c_long, m.len);
-            },
-
-            .stream => |s| {
-                self.flags.stream = true;
-                self.stream = s;
-            },
-
-            .path => |p| {
-                self.flags.pathname = true;
-                self.pathname = p;
-            },
-        }
-    }
-
-    fn fillInDriver(self: *OpenArgs, driver: ?*Driver) void {
-        if (driver) |d| {
-            self.flags.driver = true;
-            self.driver = d;
-        }
-    }
-
-    fn fillInParams(self: *OpenArgs, params: []const c.FT_Parameter) void {
-        if (params.len != 0) {
-            self.flags.params = true;
-            self.num_params = @intCast(c_int, params.len);
-            self.params = params.ptr;
-        }
-    }
-};
-
 pub const FaceSource = union(enum) {
     memory: []const u8,
     stream: *c.FT_StreamRec,
     path: [*:0]const u8,
+
+    fn populateArgs(self: @This(), args: *c.FT_Open_Args) void {
+        switch (self) {
+            .memory => |m| {
+                args.flags |= c.FT_OPEN_MEMORY;
+                args.memory_base = m.ptr;
+                args.memory_size = @intCast(c.FT_Long, m.len);
+            },
+
+            .stream => |s| {
+                args.flags |= c.FT_OPEN_STREAM;
+                args.stream = s;
+            },
+
+            .path => |p| {
+                args.flags |= c.FT_OPEN_PATHNAME;
+                args.pathname = p;
+            },
+        }
+    }
 };
 
 pub const Library = opaque {
-    extern fn FT_New_Library(*Memory, *?*Library) c_int;
-
-    extern fn FT_Add_Default_Modules(*Library) void;
-
-    extern fn FT_Set_Default_Properties(*Library) void;
+    fn toC(self: anytype) @TypeOf(pointeeCast(c.FT_LibraryRec_, self)) {
+        return pointeeCast(c.FT_LibraryRec_, self);
+    }
 
     pub const CreateOptions = struct {
-        memory: *Memory = @constCast(&c_memory),
+        memory: *c.FT_MemoryRec_ = @constCast(&c_memory),
     };
 
-    pub fn new(options: CreateOptions) Error!*Library {
-        var lib: ?*Library = null;
-        try checkError(FT_New_Library(options.memory, &lib));
+    pub fn create(options: CreateOptions) Error!*@This() {
+        var lib: c.FT_Library = null;
+        try err.check(c.FT_New_Library(options.memory, &lib));
         const result = lib.?;
-        FT_Add_Default_Modules(result);
-        FT_Set_Default_Properties(result);
-        return result;
+        c.FT_Add_Default_Modules(result);
+        c.FT_Set_Default_Properties(result);
+        return pointeeCast(Library, result);
     }
 
-    extern fn FT_Done_Library(*Library) c_int;
-
-    pub fn done(self: *Library) Error!void {
-        return checkError(FT_Done_Library(self));
+    pub fn retain(self: *@This()) Error!void {
+        return err.check(c.FT_Reference_Library(self.toC()));
     }
 
-    extern fn FT_Open_Face(*Library, *const OpenArgs, face_index: c_long, *?*Face) c_int;
+    pub fn release(self: *Library) Error!void {
+        return err.check(c.FT_Done_Library(self.toC()));
+    }
 
     pub const OpenFaceOptions = struct {
         source: FaceSource,
         face_index: u16 = 0,
         named_instance_index: u15 = 0,
-        driver: ?*Driver = null,
-        params: []const Parameter = &.{},
+        driver: ?*c.FT_DriverRec_ = null,
+        params: []const c.FT_Parameter = &.{},
     };
 
-    pub fn openFace(self: *Library, options: OpenFaceOptions) Error!*Face {
-        var result: ?*Face = null;
-        var args = OpenArgs{};
-        args.fillInSource(options.source);
-        args.fillInDriver(options.driver);
-        args.fillInParams(options.params);
+    pub fn openFace(self: *@This(), options: OpenFaceOptions) Error!*Face {
+        var args = std.mem.zeroes(c.FT_Open_Args);
+
+        options.source.populateArgs(&args);
+
+        if (options.driver) |d| {
+            args.flags |= c.FT_OPEN_DRIVER;
+            args.driver = d;
+        }
+
+        if (options.params.len != 0) {
+            args.flags |= c.FT_OPEN_PARAMS;
+            args.num_params = @intCast(c.FT_Int, options.params.len);
+            args.params = options.params.ptr;
+        }
+
         const index = (@as(u31, options.named_instance_index) << 16) | options.face_index;
-        try checkError(FT_Open_Face(self, &args, index, &result));
-        return result.?;
+
+        var face: c.FT_Face = null;
+        try err.check(c.FT_Open_Face(self, &args, index, &face));
+        return pointeeCast(Face, face.?);
     }
 };
 
-pub const GlyphSlot = extern struct {
-    library: *Library,
-    face: *Face,
-    next: ?*GlyphSlot,
-    glyph_index: c_uint,
-    generic: Generic,
-
-    metrics: GlyphMetrics,
-    linear_hori_advance: c_long,
-    linear_vert_advance: c_long,
-    advance: Vector,
-
-    format: GlyphFormat,
-
-    bitmap: Bitmap,
-    bitmap_left: c_int,
-    bitmap_top: c_int,
-
-    outline: Outline,
-
-    num_subglyphs: c_uint,
-    subglyphs: *SubGlyph,
-
-    control_data: ?*anyopaque,
-    control_len: c_long,
-
-    lsb_delta: c_long,
-    rsb_delta: c_long,
-
-    other: ?*anyopaque,
-
-    internal: ?*Internal,
-
-    pub const Internal = opaque {};
-};
-
-pub const SubGlyph = opaque {};
-
-pub const GlyphMetrics = extern struct {
-    width: c_long,
-    height: c_long,
-
-    hori_bearing_x: c_long,
-    hori_breaing_y: c_long,
-    hori_advance: c_long,
-
-    vert_bearing_x: c_long,
-    vert_bearing_y: c_long,
-    vert_advance: c_long,
-};
-
-pub const GlyphFormat = enum(u32) {
-    composite = makeTag("comp"),
-    bitmap = makeTag("bits"),
-    outline = makeTag("outl"),
-    plotter = makeTag("plot"),
-    svg = makeTag("SVG "),
-    _,
-};
-
-pub const Outline = extern struct {
-    n_contours: c_short,
-    n_points: c_short,
-
-    points: ?[*]Vector,
-    tags: ?[*]Tag,
-    contours: ?[*]c_short,
-
-    flags: Flags,
-
-    pub const Tag = packed struct(u8) {
-        on_curve: bool,
-        third_order_bezier: bool,
-        has_dropout_mode: bool,
-        _reserved: u2,
-        dropout_mode: u3,
-    };
-
-    pub const Flags = packed struct(c_int) {
-        owner: bool,
-        even_odd_fill: bool,
-        reverse_fill: bool,
-        ignore_dropouts: bool,
-        smart_dropouts: bool,
-        include_stubs: bool,
-        overlap: bool,
-        _reserved0: u1,
-        high_precision: bool,
-        single_pass: bool,
-        _reserved1: std.meta.Int(.unsigned, @bitSizeOf(c_int) - 10),
-    };
-};
-
-pub const Size = extern struct {
-    face: *Face,
-    generic: Generic,
-    metrics: Metrics,
-    internal: ?*Internal,
-
-    pub const Metrics = extern struct {
-        x_ppem: c_ushort,
-        y_ppem: c_ushort,
-
-        x_scale: c_long,
-        y_scale: c_long,
-
-        ascender: c_long,
-        descender: c_long,
-        height: c_long,
-        max_advance: c_long,
-    };
-
-    pub const Internal = opaque {};
-};
-
-pub const Driver = opaque {};
-
-pub const List = extern struct {
-    head: ?*Node,
-    tail: ?*Node,
-
-    pub const Node = extern struct {
-        prev: ?*Node,
-        next: ?*Node,
-        data: ?*anyopaque,
-    };
-};
-
-pub const Face = extern struct {
-    num_faces: c_long,
-    face_index: c_long,
-
-    face_flags: c_long,
-    style_flags: c_long,
-
-    num_glyphs: c_long,
-
-    family_name: ?[*:0]const u8,
-    style_name: ?[*:0]const u8,
-
-    num_fixed_sizes: c_int,
-    available_sizes: ?[*]BitmapSize,
-
-    num_charmaps: c_int,
-    charmaps: ?[*]CharMap,
-
-    generic: Generic,
-
-    bbox: Bbox,
-
-    units_per_em: c_ushort,
-    ascender: c_short,
-    descender: c_short,
-    height: c_short,
-
-    max_advance_width: c_short,
-    max_advance_height: c_short,
-
-    underline_position: c_short,
-    underline_thickness: c_short,
-
-    glyph: ?*GlyphSlot,
-    size: ?*Size,
-    charmap: ?*CharMap,
-
-    driver: ?*Driver,
-    memory: ?*Memory,
-    stream: ?*Stream,
-
-    sizes_list: List,
-
-    autohint: Generic,
-    extensions: ?*anyopaque,
-
-    internal: ?*Internal,
-
-    pub const Internal = opaque {};
-
-    extern fn FT_Done_Face(*Face) c_int;
-
-    pub fn done(self: *Face) Error!void {
-        return checkError(FT_Done_Face(self));
+pub const Face = opaque {
+    fn toC(self: anytype) @TypeOf(pointeeCast(c.FT_FaceRec, self)) {
+        return pointeeCast(c.FT_FaceRec, self);
     }
 
-    extern fn FT_Attach_Stream(*Face, *const OpenArgs) c_int;
-
-    pub fn attachSource(self: *Face, source: FaceSource) Error!void {
-        var args = OpenArgs{};
-        args.fillInSource(source);
-        return checkError(FT_Attach_Stream(self, &args));
+    pub fn retain(self: *@This()) Error!void {
+        return err.check(c.FT_Reference_Face(self.toC()));
     }
 
-    extern fn FT_Set_Char_Size(
-        *Face,
-        char_width: c_long,
-        char_height: c_long,
-        horz_resolution: c_uint,
-        vert_resolution: c_uint,
-    ) c_int;
+    pub fn release(self: *@This()) Error!void {
+        return err.check(c.FT_Done_Face(self.toC()));
+    }
+
+    pub fn attachSource(self: *@This(), source: FaceSource) Error!void {
+        var args = std.mem.zeroes(c.FT_Open_Args);
+        source.populateArgs(&args);
+        return err.check(c.FT_Attach_Stream(self.toC(), &args));
+    }
 
     pub fn setCharSize(
         self: *Face,
-        width: FixedPoint(.signed, 26, 6),
-        height: FixedPoint(.signed, 26, 6),
-        horz_dpi: c_uint,
-        vert_dpi: c_uint,
+        width: F26Dot6,
+        height: F26Dot6,
+        horz_dpi: c.FT_UInt,
+        vert_dpi: c.FT_UInt,
     ) Error!void {
-        return checkError(FT_Set_Char_Size(self, width.repr, height.repr, horz_dpi, vert_dpi));
+        return err.check(c.FT_Set_Char_Size(
+            self.toC(),
+            width.repr,
+            height.repr,
+            horz_dpi,
+            vert_dpi,
+        ));
     }
 
-    extern fn FT_Set_Pixel_Sizes(*Face, pixel_width: c_uint, pixel_height: c_uint) c_int;
-
-    pub fn setPixelSizes(self: *Face, width: c_uint, height: c_uint) Error!void {
-        return checkError(FT_Set_Pixel_Sizes(self, width, height));
+    pub fn setPixelSizes(self: *@This(), width: c_uint, height: c_uint) Error!void {
+        return err.check(c.FT_Set_Pixel_Sizes(self.toC(), width, height));
     }
 
     pub const LoadFlags = packed struct(u32) {
@@ -421,15 +222,47 @@ pub const Face = extern struct {
         };
     };
 
-    pub fn loadGlyph(self: *Face, glyph_index: c_uint, flags: LoadFlags) Error!void {
-        return err.check(c.FT_Load_Glyph(self.raw(), glyph_index, @bitCast(c.FT_Int32, flags)));
+    pub fn loadGlyph(self: *@This(), glyph_index: c_uint, flags: LoadFlags) Error!void {
+        return err.check(c.FT_Load_Glyph(self.toC(), glyph_index, @bitCast(c.FT_Int32, flags)));
     }
 
-    pub fn getCharIndex(self: *Face, charcode: c_ulong) c_uint {
-        return c.FT_Get_Char_index(self.raw(), charcode);
+    pub fn getCharIndex(self: *@This(), charcode: c_ulong) c_uint {
+        return c.FT_Get_Char_Index(self.toC(), charcode);
     }
 
-    pub fn loadChar(self: *Face, charcode: c_ulong, flags: LoadFlags) Error!void {
+    pub fn loadChar(self: *@This(), charcode: c_ulong, flags: LoadFlags) Error!void {
         return err.check(c.FT_Load_Char(self.raw(), charcode, @bitCast(c.FT_Int32, flags)));
     }
+};
+
+pub const Size = opaque {};
+
+pub const GlyphSlot = opaque {
+    fn toC(self: anytype) @TypeOf(pointeeCast(c.FT_GlyphSlotRec, self)) {
+        return pointeeCast(c.FT_GlyphSlotRec, self);
+    }
+
+    pub const RenderMode = enum(c_int) {
+        normal = c.FT_RENDER_MODE_NORMAL,
+        light = c.FT_RENDER_MODE_LIGHT,
+        mono = c.FT_RENDER_MODE_MONO,
+        lcd = c.FT_RENDER_MODE_LCD,
+        lcd_v = c.FT_RENDER_MODE_LCD_V,
+        sdf = c.FT_RENDER_MODE_SDF,
+    };
+
+    pub fn render(self: *@This(), mode: RenderMode) Error!void {
+        return err.check(c.FT_Render_Glyph(self.toC(), @enumToInt(mode)));
+    }
+};
+
+pub const CharMap = opaque {};
+
+pub const GlyphFormat = enum(u32) {
+    composite = c.FT_GLYPH_FORMAT_COMPOSITE,
+    bitmap = c.FT_GLYPH_FORMAT_BITMAP,
+    outline = c.FT_GLYPH_FORMAT_OUTLINE,
+    plotter = c.FT_GLYPH_FORMAT_PLOTTER,
+    svg = c.FT_GLYPH_FORMAT_SVG,
+    _,
 };

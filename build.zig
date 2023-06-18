@@ -14,6 +14,10 @@ pub fn build(b: *Build) void {
     pm_freetype.linkSystemLibrary("freetype2");
     pm_freetype.linkLibC();
 
+    const pm_fontconfig = context.projectModule("fontconfig");
+    pm_fontconfig.linkSystemLibrary("fontconfig");
+    pm_fontconfig.linkLibC();
+
     const pm_glfw = context.projectModule("glfw");
     pm_glfw.addMixedModule("common", pm_common);
     pm_glfw.linkSystemLibrary("glfw3");

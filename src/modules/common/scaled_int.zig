@@ -7,7 +7,7 @@ pub fn ScaledInt(comptime Repr: type, comptime scale: ComptimeRatio) type {
         @compileError("repr type must be a fixed-width integer type");
     }
 
-    return struct {
+    return packed struct {
         repr: Repr,
 
         const traits = Traits{

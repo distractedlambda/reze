@@ -1,28 +1,29 @@
-const common = @import("common");
 const std = @import("std");
 
+const common = @import("common");
 const Extent = common.Extent;
+const pointeeCast = common.pointeeCast;
 
 const c = @import("c.zig");
 const err = @import("err.zig");
 const Error = err.Error;
 
 pub const Monitor = opaque {
-    inline fn toC(self: *Monitor) *c.GLFWmonitor {
-        return @ptrCast(*c.GLFWmonitor, self);
+    fn toC(self: anytype) @TypeOf(pointeeCast(c.GLFWmonitor, self)) {
+        return pointeeCast(c.GLFWmonitor, self);
     }
 
     pub fn getAll() Error![]const *Monitor {
         var count: c_int = undefined;
         const monitors = c.glfwGetMonitors(&count);
         try err.check();
-        return @ptrCast([*]const *Monitor, monitors orelse return &.{})[0..@intCast(usize, count)];
+        return pointeeCast(*Monitor, monitors orelse return &.{})[0..@intCast(usize, count)];
     }
 
     pub fn getPrimary() Error!?*Monitor {
         const monitor = c.glfwGetPrimaryMonitor();
         try err.check();
-        return @ptrCast(?*Monitor, monitor);
+        return pointeeCast(Monitor, monitor);
     }
 
     pub fn getPos(self: *Monitor) Error![2]c_int {
