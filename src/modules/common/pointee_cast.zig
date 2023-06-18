@@ -1,5 +1,6 @@
 pub fn pointeeCast(comptime T: type, ptr: anytype) PointeeCast(T, @TypeOf(ptr)) {
-    return @ptrCast(PointeeCast(T, @TypeOf(ptr)), ptr);
+    const Target = PointeeCast(T, @TypeOf(ptr));
+    return @ptrCast(Target, @alignCast(@typeInfo(Target).Pointer.alignment, ptr));
 }
 
 fn PointeeCast(comptime T: type, comptime Ptr: type) type {
@@ -11,6 +12,7 @@ fn PointeeCast(comptime T: type, comptime Ptr: type) type {
         .Pointer => |info| blk: {
             var new_info = info;
             new_info.child = T;
+            if (@typeInfo(info.child) == .Opaque) new_info.alignment = @alignOf(T);
             break :blk @Type(.{ .Pointer = new_info });
         },
 

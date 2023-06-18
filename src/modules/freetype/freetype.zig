@@ -41,21 +41,21 @@ pub const Encoding = enum(c_int) {
 
 pub const c_memory = blk: {
     const fns = struct {
-        fn alloc(_: *c.FT_MemoryRec_, size: c_long) callconv(.C) ?*anyopaque {
+        fn alloc(_: [*c]c.FT_MemoryRec_, size: c_long) callconv(.C) ?*anyopaque {
             return std.c.malloc(@intCast(usize, size));
         }
 
-        fn free(_: *c.FT_MemoryRec_, block: ?*anyopaque) callconv(.C) void {
+        fn free(_: [*c]c.FT_MemoryRec_, block: ?*anyopaque) callconv(.C) void {
             std.c.free(block);
         }
 
         fn realloc(
-            _: *c.FT_MemoryRec_,
+            _: [*c]c.FT_MemoryRec_,
             _: c_long,
             new_size: c_long,
             block: ?*anyopaque,
         ) callconv(.C) ?*anyopaque {
-            return std.c.realloc(block, new_size);
+            return std.c.realloc(block, @intCast(usize, new_size));
         }
     };
 
@@ -87,7 +87,7 @@ pub const FaceSource = union(enum) {
 
             .path => |p| {
                 args.flags |= c.FT_OPEN_PATHNAME;
-                args.pathname = p;
+                args.pathname = @constCast(p);
             },
         }
     }
@@ -123,7 +123,7 @@ pub const Library = opaque {
         source: FaceSource,
         face_index: u16 = 0,
         named_instance_index: u15 = 0,
-        driver: ?*c.FT_DriverRec_ = null,
+        driver: ?*c.FT_ModuleRec_ = null,
         params: []const c.FT_Parameter = &.{},
     };
 
@@ -140,13 +140,13 @@ pub const Library = opaque {
         if (options.params.len != 0) {
             args.flags |= c.FT_OPEN_PARAMS;
             args.num_params = @intCast(c.FT_Int, options.params.len);
-            args.params = options.params.ptr;
+            args.params = @constCast(options.params.ptr);
         }
 
         const index = (@as(u31, options.named_instance_index) << 16) | options.face_index;
 
-        var face: c.FT_Face = null;
-        try err.check(c.FT_Open_Face(self, &args, index, &face));
+        var face: ?*c.FT_FaceRec = null;
+        try err.check(c.FT_Open_Face(self.toC(), &args, index, &face));
         return pointeeCast(Face, face.?);
     }
 };
@@ -162,6 +162,10 @@ pub const Face = opaque {
 
     pub fn release(self: *@This()) Error!void {
         return err.check(c.FT_Done_Face(self.toC()));
+    }
+
+    pub fn hasHorizontalMetrics(self: *const @This()) bool {
+        return c.FT_HAS_HORIZONTAL(self.toC());
     }
 
     pub fn attachSource(self: *@This(), source: FaceSource) Error!void {
@@ -231,7 +235,7 @@ pub const Face = opaque {
     }
 
     pub fn loadChar(self: *@This(), charcode: c_ulong, flags: LoadFlags) Error!void {
-        return err.check(c.FT_Load_Char(self.raw(), charcode, @bitCast(c.FT_Int32, flags)));
+        return err.check(c.FT_Load_Char(self.toC(), charcode, @bitCast(c.FT_Int32, flags)));
     }
 };
 
@@ -242,7 +246,7 @@ pub const GlyphSlot = opaque {
         return pointeeCast(c.FT_GlyphSlotRec, self);
     }
 
-    pub const RenderMode = enum(c_int) {
+    pub const RenderMode = enum(c_uint) {
         normal = c.FT_RENDER_MODE_NORMAL,
         light = c.FT_RENDER_MODE_LIGHT,
         mono = c.FT_RENDER_MODE_MONO,
@@ -266,3 +270,10 @@ pub const GlyphFormat = enum(u32) {
     svg = c.FT_GLYPH_FORMAT_SVG,
     _,
 };
+
+test {
+    std.testing.refAllDecls(@This());
+    std.testing.refAllDecls(Library);
+    std.testing.refAllDecls(Face);
+    std.testing.refAllDecls(GlyphSlot);
+}
