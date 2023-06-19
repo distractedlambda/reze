@@ -4,6 +4,7 @@ const c = @import("c.zig");
 const err = @import("err.zig");
 
 const common = @import("common");
+const CEnum = common.CEnum;
 const FixedPoint = common.FixedPoint;
 const pointeeCast = common.pointeeCast;
 
@@ -245,14 +246,14 @@ pub const GlyphSlot = opaque {
         return pointeeCast(c.FT_GlyphSlotRec, self);
     }
 
-    pub const RenderMode = enum(c_uint) {
-        normal = c.FT_RENDER_MODE_NORMAL,
-        light = c.FT_RENDER_MODE_LIGHT,
-        mono = c.FT_RENDER_MODE_MONO,
-        lcd = c.FT_RENDER_MODE_LCD,
-        lcd_v = c.FT_RENDER_MODE_LCD_V,
-        sdf = c.FT_RENDER_MODE_SDF,
-    };
+    pub const RenderMode = CEnum(c.FT_Render_Mode, c, .{
+        .{ "FT_RENDER_MODE_NORMAL", "normal" },
+        .{ "FT_RENDER_MODE_LIGHT", "light" },
+        .{ "FT_RENDER_MODE_MONO", "mono" },
+        .{ "FT_RENDER_MODE_LCD", "lcd" },
+        .{ "FT_RENDER_MODE_LCD_V", "lcd_v" },
+        .{ "FT_RENDER_MODE_SDF", "sdf" },
+    });
 
     pub fn render(self: *@This(), mode: RenderMode) !void {
         return err.check(c.FT_Render_Glyph(self.toC(), @enumToInt(mode)));
@@ -261,14 +262,13 @@ pub const GlyphSlot = opaque {
 
 pub const CharMap = opaque {};
 
-pub const GlyphFormat = enum(u32) {
-    composite = c.FT_GLYPH_FORMAT_COMPOSITE,
-    bitmap = c.FT_GLYPH_FORMAT_BITMAP,
-    outline = c.FT_GLYPH_FORMAT_OUTLINE,
-    plotter = c.FT_GLYPH_FORMAT_PLOTTER,
-    svg = c.FT_GLYPH_FORMAT_SVG,
-    _,
-};
+pub const GlyphFormat = CEnum(u32, c, .{
+    .{ "FT_GLYPH_FORMAT_COMPOSITE", "composite" },
+    .{ "FT_GLYPH_FORMAT_BITMAP", "bitmap" },
+    .{ "FT_GLYPH_FORMAT_OUTLINE", "outline" },
+    .{ "FT_GLYPH_FORMAT_PLOTTER", "plotter" },
+    .{ "FT_GLYPH_FORMAT_SVG", "svg" },
+});
 
 test {
     std.testing.refAllDecls(@This());
