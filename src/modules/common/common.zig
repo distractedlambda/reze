@@ -8,6 +8,7 @@ pub const FixedPoint = scaled_int.FixedPoint;
 pub const ScaledInt = scaled_int.ScaledInt;
 
 pub const pointeeCast = @import("pointee_cast.zig").pointeeCast;
+pub const translateCError = @import("translate_c_error.zig").translateCError;
 
 test {
     _ = @import("aabb.zig");
@@ -16,4 +17,5 @@ test {
     _ = @import("pointee_cast.zig");
     _ = @import("ReadOnlyFileMapping.zig");
     _ = @import("scaled_int.zig");
+    _ = @import("translate_c_error.zig");
 }

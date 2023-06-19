@@ -2,7 +2,6 @@ const std = @import("std");
 
 const c = @import("c.zig");
 const err = @import("err.zig");
-pub const Error = err.Error;
 
 const common = @import("common");
 const FixedPoint = common.FixedPoint;
@@ -102,7 +101,7 @@ pub const Library = opaque {
         memory: *c.FT_MemoryRec_ = @constCast(&c_memory),
     };
 
-    pub fn create(options: CreateOptions) Error!*@This() {
+    pub fn create(options: CreateOptions) !*@This() {
         var lib: c.FT_Library = null;
         try err.check(c.FT_New_Library(options.memory, &lib));
         const result = lib.?;
@@ -111,11 +110,11 @@ pub const Library = opaque {
         return pointeeCast(Library, result);
     }
 
-    pub fn retain(self: *@This()) Error!void {
+    pub fn retain(self: *@This()) !void {
         return err.check(c.FT_Reference_Library(self.toC()));
     }
 
-    pub fn release(self: *Library) Error!void {
+    pub fn release(self: *Library) !void {
         return err.check(c.FT_Done_Library(self.toC()));
     }
 
@@ -127,7 +126,7 @@ pub const Library = opaque {
         params: []const c.FT_Parameter = &.{},
     };
 
-    pub fn openFace(self: *@This(), options: OpenFaceOptions) Error!*Face {
+    pub fn openFace(self: *@This(), options: OpenFaceOptions) !*Face {
         var args = std.mem.zeroes(c.FT_Open_Args);
 
         options.source.populateArgs(&args);
@@ -156,11 +155,11 @@ pub const Face = opaque {
         return pointeeCast(c.FT_FaceRec, self);
     }
 
-    pub fn retain(self: *@This()) Error!void {
+    pub fn retain(self: *@This()) !void {
         return err.check(c.FT_Reference_Face(self.toC()));
     }
 
-    pub fn release(self: *@This()) Error!void {
+    pub fn release(self: *@This()) !void {
         return err.check(c.FT_Done_Face(self.toC()));
     }
 
@@ -168,7 +167,7 @@ pub const Face = opaque {
         return c.FT_HAS_HORIZONTAL(self.toC());
     }
 
-    pub fn attachSource(self: *@This(), source: FaceSource) Error!void {
+    pub fn attachSource(self: *@This(), source: FaceSource) !void {
         var args = std.mem.zeroes(c.FT_Open_Args);
         source.populateArgs(&args);
         return err.check(c.FT_Attach_Stream(self.toC(), &args));
@@ -180,7 +179,7 @@ pub const Face = opaque {
         height: F26Dot6,
         horz_dpi: c.FT_UInt,
         vert_dpi: c.FT_UInt,
-    ) Error!void {
+    ) !void {
         return err.check(c.FT_Set_Char_Size(
             self.toC(),
             width.repr,
@@ -190,7 +189,7 @@ pub const Face = opaque {
         ));
     }
 
-    pub fn setPixelSizes(self: *@This(), width: c_uint, height: c_uint) Error!void {
+    pub fn setPixelSizes(self: *@This(), width: c_uint, height: c_uint) !void {
         return err.check(c.FT_Set_Pixel_Sizes(self.toC(), width, height));
     }
 
@@ -226,7 +225,7 @@ pub const Face = opaque {
         };
     };
 
-    pub fn loadGlyph(self: *@This(), glyph_index: c_uint, flags: LoadFlags) Error!void {
+    pub fn loadGlyph(self: *@This(), glyph_index: c_uint, flags: LoadFlags) !void {
         return err.check(c.FT_Load_Glyph(self.toC(), glyph_index, @bitCast(c.FT_Int32, flags)));
     }
 
@@ -234,7 +233,7 @@ pub const Face = opaque {
         return c.FT_Get_Char_Index(self.toC(), charcode);
     }
 
-    pub fn loadChar(self: *@This(), charcode: c_ulong, flags: LoadFlags) Error!void {
+    pub fn loadChar(self: *@This(), charcode: c_ulong, flags: LoadFlags) !void {
         return err.check(c.FT_Load_Char(self.toC(), charcode, @bitCast(c.FT_Int32, flags)));
     }
 };
@@ -255,7 +254,7 @@ pub const GlyphSlot = opaque {
         sdf = c.FT_RENDER_MODE_SDF,
     };
 
-    pub fn render(self: *@This(), mode: RenderMode) Error!void {
+    pub fn render(self: *@This(), mode: RenderMode) !void {
         return err.check(c.FT_Render_Glyph(self.toC(), @enumToInt(mode)));
     }
 };

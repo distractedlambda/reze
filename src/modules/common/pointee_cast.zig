@@ -1,6 +1,16 @@
 pub fn pointeeCast(comptime T: type, ptr: anytype) PointeeCast(T, @TypeOf(ptr)) {
-    const Target = PointeeCast(T, @TypeOf(ptr));
-    return @ptrCast(Target, @alignCast(@typeInfo(Target).Pointer.alignment, ptr));
+    return switch (@typeInfo(@TypeOf(ptr))) {
+        .Optional => if (ptr) |p| pointeeCast(T, p) else null,
+
+        .ErrorUnion => pointeeCast(T, try ptr),
+
+        .Pointer => |tinfo| @ptrCast(
+            PointeeCast(T, @TypeOf(ptr)),
+            if (@typeInfo(tinfo.child) == .Opaque) @alignCast(@alignOf(T), ptr) else ptr,
+        ),
+
+        else => unreachable,
+    };
 }
 
 fn PointeeCast(comptime T: type, comptime Ptr: type) type {

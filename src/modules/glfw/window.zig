@@ -6,7 +6,6 @@ const pointeeCast = common.pointeeCast;
 
 const c = @import("c.zig");
 const err = @import("err.zig");
-const Error = err.Error;
 const Monitor = @import("monitor.zig").Monitor;
 
 pub const Window = opaque {
@@ -14,17 +13,17 @@ pub const Window = opaque {
         return pointeeCast(c.GLFWwindow, self);
     }
 
-    fn defaultWindowHints() Error!void {
+    fn defaultWindowHints() !void {
         c.glfwDefaultWindowHints();
         try err.check();
     }
 
-    fn windowHint(hint: c_int, value: c_int) Error!void {
+    fn windowHint(hint: c_int, value: c_int) !void {
         c.glfwWindowHint(hint, value);
         try err.check();
     }
 
-    fn windowHintString(hint: c_int, value: [*:0]const u8) Error!void {
+    fn windowHintString(hint: c_int, value: [*:0]const u8) !void {
         c.glfwWindowHintString(hint, value);
         try err.check();
     }
@@ -109,7 +108,7 @@ pub const Window = opaque {
         };
     };
 
-    pub fn create(options: CreateOptions) Error!*Window {
+    pub fn create(options: CreateOptions) !*Window {
         try defaultWindowHints();
 
         if (options.focused) |v|
@@ -254,52 +253,52 @@ pub const Window = opaque {
         return pointeeCast(Window, window.?);
     }
 
-    pub fn destroy(self: *Window) Error!void {
+    pub fn destroy(self: *Window) !void {
         c.glfwDestroyWindow(self.toC());
         try err.check();
     }
 
-    pub fn shouldClose(self: *Window) Error!bool {
+    pub fn shouldClose(self: *Window) !bool {
         const result = c.glfwWindowShouldClose(self.toC());
         try err.check();
         return result != c.GLFW_FALSE;
     }
 
-    pub fn setShouldClose(self: *Window, value: bool) Error!void {
+    pub fn setShouldClose(self: *Window, value: bool) !void {
         c.glfwSetWindowShouldClose(self.toC(), @boolToInt(value));
         try err.check();
     }
 
-    pub fn setTitle(self: *Window, value: [*:0]const u8) Error!void {
+    pub fn setTitle(self: *Window, value: [*:0]const u8) !void {
         c.glfwSetWindowTitle(self.toC(), value);
         try err.check();
     }
 
-    pub fn setIcon(self: *Window, images: []const c.GLFWimage) Error!void {
+    pub fn setIcon(self: *Window, images: []const c.GLFWimage) !void {
         c.glfwSetWindowIcon(self.toC(), @intCast(c_int, images.len), images.ptr);
         try err.check();
     }
 
-    pub fn getPos(self: *Window) Error![2]c_int {
+    pub fn getPos(self: *Window) ![2]c_int {
         var result: [2]c_int = undefined;
         c.glfwGetWindowPos(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn setPos(self: *Window, pos: [2]c_int) Error!void {
+    pub fn setPos(self: *Window, pos: [2]c_int) !void {
         c.glfwSetWindowPos(self.toC(), pos[0], pos[1]);
         try err.check();
     }
 
-    pub fn getSize(self: *Window) Error![2]c_int {
+    pub fn getSize(self: *Window) ![2]c_int {
         var result: [2]c_int = undefined;
         c.glfwGetWindowSize(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn setSizeLimits(self: *Window, limits: Aabb(2, ?c_int)) Error!void {
+    pub fn setSizeLimits(self: *Window, limits: Aabb(2, ?c_int)) !void {
         c.glfwSetWindowSizeLimits(
             self.toC(),
             limits.min[0] orelse -1,
@@ -311,7 +310,7 @@ pub const Window = opaque {
         try err.check();
     }
 
-    pub fn setAspectRatio(self: *Window, ratio: ?[2]c_int) Error!void {
+    pub fn setAspectRatio(self: *Window, ratio: ?[2]c_int) !void {
         c.glfwSetWindowAspectRatio(
             self.toC(),
             if (ratio) |r| r[0] else -1,
@@ -321,94 +320,94 @@ pub const Window = opaque {
         try err.check();
     }
 
-    pub fn setSize(self: *Window, size: [2]c_int) Error!void {
+    pub fn setSize(self: *Window, size: [2]c_int) !void {
         c.glfwSetWindowSize(self.toC(), size[0], size[1]);
         try err.check();
     }
 
-    pub fn getFramebufferSize(self: *Window) Error![2]c_int {
+    pub fn getFramebufferSize(self: *Window) ![2]c_int {
         var result: [2]c_int = undefined;
         c.glfwGetFramebufferSize(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn getContentScale(self: *Window) Error![2]f32 {
+    pub fn getContentScale(self: *Window) ![2]f32 {
         var result: [2]f32 = undefined;
         c.glfwGetWindowContentScale(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn getOpacity(self: *Window) Error!f32 {
+    pub fn getOpacity(self: *Window) !f32 {
         const result = c.glfwGetWindowOpacity(self.toC());
         try err.check();
         return result;
     }
 
-    pub fn setOpacity(self: *Window, opacity: f32) Error!void {
+    pub fn setOpacity(self: *Window, opacity: f32) !void {
         c.glfwSetWindowOpacity(self.toC(), opacity);
         try err.check();
     }
 
-    pub fn iconify(self: *Window) Error!void {
+    pub fn iconify(self: *Window) !void {
         c.glfwIconifyWindow(self.toC());
         try err.check();
     }
 
-    pub fn restore(self: *Window) Error!void {
+    pub fn restore(self: *Window) !void {
         c.glfwRestoreWindow(self.toC());
         try err.check();
     }
 
-    pub fn maximize(self: *Window) Error!void {
+    pub fn maximize(self: *Window) !void {
         c.glfwMaximizeWindow(self.toC());
         try err.check();
     }
 
-    pub fn show(self: *Window) Error!void {
+    pub fn show(self: *Window) !void {
         c.glfwShowWindow(self.toC());
         try err.check();
     }
 
-    pub fn hide(self: *Window) Error!void {
+    pub fn hide(self: *Window) !void {
         c.glfwHideWindow(self.toC());
         try err.check();
     }
 
-    pub fn focus(self: *Window) Error!void {
+    pub fn focus(self: *Window) !void {
         c.glfwFocusWindow(self.toC());
         try err.check();
     }
 
-    pub fn requestAttention(self: *Window) Error!void {
+    pub fn requestAttention(self: *Window) !void {
         c.glfwRequestWindowAttention(self.toC());
         try err.check();
     }
 
-    pub fn getMonitor(self: *Window) Error!?*Monitor {
+    pub fn getMonitor(self: *Window) !?*Monitor {
         const result = c.glfwGetWindowMonitor(self.toC());
         try err.check();
         return @ptrCast(?*Monitor, result);
     }
 
-    pub fn setUserPointer(self: *Window, pointer: ?*anyopaque) Error!void {
+    pub fn setUserPointer(self: *Window, pointer: ?*anyopaque) !void {
         c.glfwSetWindowUserPointer(self.toC(), pointer);
         try err.check();
     }
 
-    pub fn getUserPointer(self: *Window) Error!?*anyopaque {
+    pub fn getUserPointer(self: *Window) !?*anyopaque {
         const result = c.glfwGetWindowUserPointer(self.toC());
         try err.check();
         return result;
     }
 
-    pub fn swapBuffers(self: *Window) Error!void {
+    pub fn swapBuffers(self: *Window) !void {
         c.glfwSwapBuffers(self.toC());
         try err.check();
     }
 
-    pub fn makeContextCurrent(self: *Window) Error!void {
+    pub fn makeContextCurrent(self: *Window) !void {
         c.glfwMakeContextCurrent(self.toC());
         try err.check();
     }

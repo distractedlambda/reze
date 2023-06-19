@@ -6,34 +6,33 @@ const pointeeCast = common.pointeeCast;
 
 const c = @import("c.zig");
 const err = @import("err.zig");
-const Error = err.Error;
 
 pub const Monitor = opaque {
     fn toC(self: anytype) @TypeOf(pointeeCast(c.GLFWmonitor, self)) {
         return pointeeCast(c.GLFWmonitor, self);
     }
 
-    pub fn getAll() Error![]const *Monitor {
+    pub fn getAll() ![]const *Monitor {
         var count: c_int = undefined;
         const monitors = c.glfwGetMonitors(&count);
         try err.check();
         return pointeeCast(*Monitor, monitors orelse return &.{})[0..@intCast(usize, count)];
     }
 
-    pub fn getPrimary() Error!?*Monitor {
+    pub fn getPrimary() !?*Monitor {
         const monitor = c.glfwGetPrimaryMonitor();
         try err.check();
         return pointeeCast(Monitor, monitor);
     }
 
-    pub fn getPos(self: *Monitor) Error![2]c_int {
+    pub fn getPos(self: *Monitor) ![2]c_int {
         var result: [2]c_int = undefined;
         c.glfwGetMonitorPos(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn getWorkarea(self: *Monitor) Error!Extent(2, c_int) {
+    pub fn getWorkarea(self: *Monitor) !Extent(2, c_int) {
         var result: Extent(2, c_int) = undefined;
 
         c.glfwGetMonitorWorkarea(
@@ -49,21 +48,21 @@ pub const Monitor = opaque {
         return result;
     }
 
-    pub fn getPhysicalSize(self: *Monitor) Error![2]c_int {
+    pub fn getPhysicalSize(self: *Monitor) ![2]c_int {
         var result: [2]c_int = undefined;
         c.glfwGetMonitorPhysicalSize(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn getContentScale(self: *Monitor) Error![2]f32 {
+    pub fn getContentScale(self: *Monitor) ![2]f32 {
         var result: [2]f32 = undefined;
         c.glfwGetMonitorContentScale(self.toC(), &result[0], &result[1]);
         try err.check();
         return result;
     }
 
-    pub fn getName(self: *Monitor) Error![*:0]const u8 {
+    pub fn getName(self: *Monitor) ![*:0]const u8 {
         const result = c.glfwGetMonitorName(self.toC());
         try err.check();
         return result;
