@@ -23,6 +23,11 @@ pub fn build(b: *Build) void {
     pm_glfw.linkSystemLibrary("glfw3");
     pm_glfw.linkLibC();
 
+    const pm_harfbuzz = context.projectModule("harfbuzz");
+    pm_harfbuzz.addMixedModule("common", pm_common);
+    pm_harfbuzz.linkSystemLibrary("harfbuzz");
+    pm_harfbuzz.linkLibC();
+
     const pm_wasm = context.projectModule("wasm");
     _ = pm_wasm;
 
