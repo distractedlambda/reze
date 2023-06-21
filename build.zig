@@ -20,8 +20,16 @@ pub fn build(b: *Build) void {
 
     const pm_glfw = context.projectModule("glfw");
     pm_glfw.addMixedModule("common", pm_common);
-    pm_glfw.linkSystemLibrary("glfw3");
-    pm_glfw.linkLibC();
+    if (b.option(bool, "use_system_glfw", "Use the system GLFW installation") orelse false) {
+        pm_glfw.linkSystemLibrary("glfw3");
+        pm_glfw.linkLibC();
+    } else {
+        pm_glfw.linkLibrary(@import("buildsrc/glfw.zig").addGlfw(b, .{
+            .target = context.target,
+            .optimize = context.optimize,
+            .vulkan_loader = null,
+        }));
+    }
 
     const pm_harfbuzz = context.projectModule("harfbuzz");
     pm_harfbuzz.addMixedModule("common", pm_common);
