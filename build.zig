@@ -9,10 +9,25 @@ pub fn build(b: *Build) void {
 
     const pm_common = context.projectModule("common");
 
+    const zlib = @import("buildsrc/zlib.zig").addZlib(b, .{
+        .target = context.target,
+        .optimize = context.optimize,
+    });
+
+    const libpng = @import("buildsrc/libpng.zig").addLibpng(b, .{
+        .target = context.target,
+        .optimize = context.optimize,
+        .zlib = zlib,
+    });
+
     const pm_freetype = context.projectModule("freetype");
     pm_freetype.addMixedModule("common", pm_common);
-    pm_freetype.linkSystemLibrary("freetype2");
-    pm_freetype.linkLibC();
+    pm_freetype.linkLibrary(@import("buildsrc/freetype.zig").addFreetype(b, .{
+        .target = context.target,
+        .optimize = context.optimize,
+        .zlib = zlib,
+        .png = libpng,
+    }));
 
     const pm_fontconfig = context.projectModule("fontconfig");
     pm_fontconfig.linkSystemLibrary("fontconfig");
@@ -20,16 +35,11 @@ pub fn build(b: *Build) void {
 
     const pm_glfw = context.projectModule("glfw");
     pm_glfw.addMixedModule("common", pm_common);
-    if (b.option(bool, "use_system_glfw", "Use the system GLFW installation") orelse false) {
-        pm_glfw.linkSystemLibrary("glfw3");
-        pm_glfw.linkLibC();
-    } else {
-        pm_glfw.linkLibrary(@import("buildsrc/glfw.zig").addGlfw(b, .{
-            .target = context.target,
-            .optimize = context.optimize,
-            .vulkan_loader = null,
-        }));
-    }
+    pm_glfw.linkLibrary(@import("buildsrc/glfw.zig").addGlfw(b, .{
+        .target = context.target,
+        .optimize = context.optimize,
+        .vulkan_loader = null,
+    }));
 
     const pm_harfbuzz = context.projectModule("harfbuzz");
     pm_harfbuzz.addMixedModule("common", pm_common);

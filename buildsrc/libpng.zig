@@ -23,15 +23,15 @@ pub fn addLibpng(b: *Build, config: Config) *Step.Compile {
     lib.linkLibrary(config.zlib);
 
     const pnglibconf = b.addConfigHeader(.{
-        .style = .{ .cmake = .{ .path = "third_party/libpng/scripts/pnglibconf.h.prebuild" } },
+        .style = .{ .cmake = .{ .path = "third_party/libpng/scripts/pnglibconf.h.prebuilt" } },
         .include_path = "pnglibconf.h",
-    });
+    }, .{});
 
     lib.addIncludePath("third_party/libpng");
     lib.addConfigHeader(pnglibconf);
 
-    lib.installHeader("third_party/libpng/png.h", "");
-    lib.installHeader("third_party/libpng/pngconf.h", "");
+    lib.installHeader("third_party/libpng/png.h", "png.h");
+    lib.installHeader("third_party/libpng/pngconf.h", "pngconf.h");
     lib.installConfigHeader(pnglibconf, .{});
 
     if (hasArmNeon(lib.target_info.target)) {
@@ -81,6 +81,8 @@ pub fn addLibpng(b: *Build, config: Config) *Step.Compile {
         "third_party/libpng/pngwtran.c",
         "third_party/libpng/pngwutil.c",
     }, &.{});
+
+    return lib;
 }
 
 fn hasArmNeon(target: Target) bool {
