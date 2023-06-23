@@ -228,7 +228,7 @@ pub const Blob = opaque {
         return pointeeCast(@This(), c.hb_blob_create(
             data.ptr,
             checkLen(data.len),
-            @enumToInt(options.data),
+            @intFromEnum(options.data),
             options.user_data,
             options.destroy,
         ).?);
@@ -239,7 +239,7 @@ pub const Blob = opaque {
         return pointeeCast(@This(), c.hb_blob_create_or_fail(
             data.ptr,
             checkLen(data.len),
-            @enumToInt(options.data),
+            @intFromEnum(options.data),
             options.user_data,
             options.destroy,
         ));
@@ -439,7 +439,7 @@ pub const Buffer = opaque {
     };
 
     pub fn setContentType(self: *@This(), content_type: ContentType) void {
-        c.hb_buffer_set_content_type(self.toC(), @enumToInt(content_type));
+        c.hb_buffer_set_content_type(self.toC(), @intFromEnum(content_type));
     }
 
     pub fn getContentType(self: *const @This()) ContentType {
@@ -447,7 +447,7 @@ pub const Buffer = opaque {
     }
 
     pub fn setDirection(self: *@This(), direction: Direction) void {
-        c.hb_buffer_set_direction(self.toC(), @enumToInt(direction));
+        c.hb_buffer_set_direction(self.toC(), @intFromEnum(direction));
     }
 
     pub fn getDirection(self: *const @This()) Direction {
@@ -455,7 +455,7 @@ pub const Buffer = opaque {
     }
 
     pub fn setScript(self: *@This(), script: Script) void {
-        c.hb_buffer_set_script(self.toC(), @enumToInt(script));
+        c.hb_buffer_set_script(self.toC(), @intFromEnum(script));
     }
 
     pub fn getScript(self: *const @This()) Script {
@@ -496,7 +496,7 @@ pub const Buffer = opaque {
     });
 
     pub fn setClusterLevel(self: *@This(), cluster_level: ClusterLevel) void {
-        c.hb_buffer_set_cluster_level(self.toC(), @enumToInt(cluster_level));
+        c.hb_buffer_set_cluster_level(self.toC(), @intFromEnum(cluster_level));
     }
 
     pub fn getClusterLevel(self: *const @This()) ClusterLevel {
@@ -521,8 +521,8 @@ pub const Buffer = opaque {
 
     pub fn setSegmentProperties(self: *@This(), properties: SegmentProperties) void {
         var c_properties = std.mem.zeroes(c.hb_segment_properties_t);
-        c_properties.direction = @enumToInt(properties.direction);
-        c_properties.script = @enumToInt(properties.script);
+        c_properties.direction = @intFromEnum(properties.direction);
+        c_properties.script = @intFromEnum(properties.script);
         c_properties.language = Language.toC(properties.language);
         c.hb_buffer_set_segment_properties(self.toC(), &c_properties);
     }

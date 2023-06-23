@@ -22,13 +22,13 @@ pub const InitOptions = struct {
 
 pub fn init(options: InitOptions) !void {
     if (options.joystick_hat_buttons) |v|
-        try initHint(c.GLFW_JOYSTICK_HAT_BUTTONS, @boolToInt(v));
+        try initHint(c.GLFW_JOYSTICK_HAT_BUTTONS, @intFromBool(v));
 
     if (options.cocoa_chdir_resources) |v|
-        try initHint(c.GLFW_COCOA_CHDIR_RESOURCES, @boolToInt(v));
+        try initHint(c.GLFW_COCOA_CHDIR_RESOURCES, @intFromBool(v));
 
     if (options.cocoa_menubar) |v|
-        try initHint(c.GLFW_COCOA_MENUBAR, @boolToInt(v));
+        try initHint(c.GLFW_COCOA_MENUBAR, @intFromBool(v));
 
     if (c.glfwInit() == c.GLFW_FALSE) {
         try err.check();

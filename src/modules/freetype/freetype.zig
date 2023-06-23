@@ -256,7 +256,7 @@ pub const GlyphSlot = opaque {
     });
 
     pub fn render(self: *@This(), mode: RenderMode) !void {
-        return err.check(c.FT_Render_Glyph(self.toC(), @enumToInt(mode)));
+        return err.check(c.FT_Render_Glyph(self.toC(), @intFromEnum(mode)));
     }
 };
 

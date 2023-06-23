@@ -112,37 +112,37 @@ pub const Window = opaque {
         try defaultWindowHints();
 
         if (options.focused) |v|
-            try windowHint(c.GLFW_FOCUSED, @boolToInt(v));
+            try windowHint(c.GLFW_FOCUSED, @intFromBool(v));
 
         if (options.auto_iconify) |v|
-            try windowHint(c.GLFW_AUTO_ICONIFY, @boolToInt(v));
+            try windowHint(c.GLFW_AUTO_ICONIFY, @intFromBool(v));
 
         if (options.resizable) |v|
-            try windowHint(c.GLFW_RESIZABLE, @boolToInt(v));
+            try windowHint(c.GLFW_RESIZABLE, @intFromBool(v));
 
         if (options.visible) |v|
-            try windowHint(c.GLFW_VISIBLE, @boolToInt(v));
+            try windowHint(c.GLFW_VISIBLE, @intFromBool(v));
 
         if (options.decorated) |v|
-            try windowHint(c.GLFW_DECORATED, @boolToInt(v));
+            try windowHint(c.GLFW_DECORATED, @intFromBool(v));
 
         if (options.auto_iconify) |v|
-            try windowHint(c.GLFW_AUTO_ICONIFY, @boolToInt(v));
+            try windowHint(c.GLFW_AUTO_ICONIFY, @intFromBool(v));
 
         if (options.floating) |v|
-            try windowHint(c.GLFW_FLOATING, @boolToInt(v));
+            try windowHint(c.GLFW_FLOATING, @intFromBool(v));
 
         if (options.maximized) |v|
-            try windowHint(c.GLFW_MAXIMIZED, @boolToInt(v));
+            try windowHint(c.GLFW_MAXIMIZED, @intFromBool(v));
 
         if (options.center_cursor) |v|
-            try windowHint(c.GLFW_CENTER_CURSOR, @boolToInt(v));
+            try windowHint(c.GLFW_CENTER_CURSOR, @intFromBool(v));
 
         if (options.transparent_framebuffer) |v|
-            try windowHint(c.GLFW_TRANSPARENT_FRAMEBUFFER, @boolToInt(v));
+            try windowHint(c.GLFW_TRANSPARENT_FRAMEBUFFER, @intFromBool(v));
 
         if (options.focus_on_show) |v|
-            try windowHint(c.GLFW_FOCUS_ON_SHOW, @boolToInt(v));
+            try windowHint(c.GLFW_FOCUS_ON_SHOW, @intFromBool(v));
 
         if (options.red_bits) |v|
             try windowHint(c.GLFW_RED_BITS, v);
@@ -178,22 +178,22 @@ pub const Window = opaque {
             try windowHint(c.GLFW_AUX_BUFFERS, v);
 
         if (options.stereo) |v|
-            try windowHint(c.GLFW_STEREO, @boolToInt(v));
+            try windowHint(c.GLFW_STEREO, @intFromBool(v));
 
         if (options.samples) |v|
             try windowHint(c.GLFW_SAMPLES, v);
 
         if (options.srgb_capable) |v|
-            try windowHint(c.GLFW_SRGB_CAPABLE, @boolToInt(v));
+            try windowHint(c.GLFW_SRGB_CAPABLE, @intFromBool(v));
 
         if (options.refresh_rate) |v|
             try windowHint(c.GLFW_REFRESH_RATE, v);
 
         if (options.doublebuffer) |v|
-            try windowHint(c.GLFW_DOUBLEBUFFER, @boolToInt(v));
+            try windowHint(c.GLFW_DOUBLEBUFFER, @intFromBool(v));
 
         if (options.client_api) |v|
-            try windowHint(c.GLFW_CLIENT_API, @enumToInt(v));
+            try windowHint(c.GLFW_CLIENT_API, @intFromEnum(v));
 
         if (options.context_version_major) |v|
             try windowHint(c.GLFW_CONTEXT_VERSION_MAJOR, v);
@@ -202,37 +202,37 @@ pub const Window = opaque {
             try windowHint(c.GLFW_CONTEXT_VERSION_MINOR, v);
 
         if (options.context_robustness) |v|
-            try windowHint(c.GLFW_CONTEXT_ROBUSTNESS, @enumToInt(v));
+            try windowHint(c.GLFW_CONTEXT_ROBUSTNESS, @intFromEnum(v));
 
         if (options.opengl_forward_compat) |v|
-            try windowHint(c.GLFW_OPENGL_FORWARD_COMPAT, @boolToInt(v));
+            try windowHint(c.GLFW_OPENGL_FORWARD_COMPAT, @intFromBool(v));
 
         if (options.opengl_debug_context) |v|
-            try windowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, @boolToInt(v));
+            try windowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, @intFromBool(v));
 
         if (options.opengl_profile) |v|
-            try windowHint(c.GLFW_OPENGL_PROFILE, @enumToInt(v));
+            try windowHint(c.GLFW_OPENGL_PROFILE, @intFromEnum(v));
 
         if (options.context_release_behavior) |v|
-            try windowHint(c.GLFW_CONTEXT_RELEASE_BEHAVIOR, @enumToInt(v));
+            try windowHint(c.GLFW_CONTEXT_RELEASE_BEHAVIOR, @intFromEnum(v));
 
         if (options.context_no_error) |v|
-            try windowHint(c.GLFW_CONTEXT_NO_ERROR, @boolToInt(v));
+            try windowHint(c.GLFW_CONTEXT_NO_ERROR, @intFromBool(v));
 
         if (options.context_creation_api) |v|
-            try windowHint(c.GLFW_CONTEXT_CREATION_API, @enumToInt(v));
+            try windowHint(c.GLFW_CONTEXT_CREATION_API, @intFromEnum(v));
 
         if (options.scale_to_monitor) |v|
-            try windowHint(c.GLFW_SCALE_TO_MONITOR, @boolToInt(v));
+            try windowHint(c.GLFW_SCALE_TO_MONITOR, @intFromBool(v));
 
         if (options.cocoa_retina_framebuffer) |v|
-            try windowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, @boolToInt(v));
+            try windowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, @intFromBool(v));
 
         if (options.cocoa_frame_name) |v|
             try windowHintString(c.GLFW_COCOA_FRAME_NAME, v);
 
         if (options.cocoa_graphics_switching) |v|
-            try windowHint(c.GLFW_COCOA_GRAPHICS_SWITCHING, @boolToInt(v));
+            try windowHint(c.GLFW_COCOA_GRAPHICS_SWITCHING, @intFromBool(v));
 
         if (options.x11_class_name) |v|
             try windowHintString(c.GLFW_X11_CLASS_NAME, v);
@@ -265,7 +265,7 @@ pub const Window = opaque {
     }
 
     pub fn setShouldClose(self: *Window, value: bool) !void {
-        c.glfwSetWindowShouldClose(self.toC(), @boolToInt(value));
+        c.glfwSetWindowShouldClose(self.toC(), @intFromBool(value));
         try err.check();
     }
 

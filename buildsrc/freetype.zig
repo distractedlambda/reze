@@ -23,11 +23,31 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
         .link_libc = true,
     });
 
-    if (config.zlib) |l| lib.linkLibrary(l);
-    if (config.bzip2) |l| lib.linkLibrary(l);
-    if (config.png) |l| lib.linkLibrary(l);
-    if (config.harfbuzz) |l| lib.linkLibrary(l);
-    if (config.brotli) |l| lib.linkLibrary(l);
+    const ftconfig = b.addConfigHeader(.{
+        .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
+        .include_path = "freetype/config/ftconfig.h",
+    }, .{
+        .HAVE_UNISTD_H = {},
+        .HAVE_FCNTL_H = {},
+    });
+
+    lib.addConfigHeader(ftconfig);
+    lib.installConfigHeader(ftconfig, .{});
+
+    const ftoption = b.addConfigHeader(.{
+        .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
+        .include_path = "freetype/config/ftoption.h",
+    }, .{
+        .FT_CONFIG_OPTION_USE_LZW = definedIf(config.zlib != null),
+        .FT_CONFIG_OPTION_USE_ZLIB = definedIf(config.zlib != null),
+        .FT_CONFIG_OPTION_USE_BZIP2 = definedIf(config.bzip2 != null),
+        .FT_CONFIG_OPTION_USE_PNG = definedIf(config.png != null),
+        .FT_CONFIG_OPTION_USE_HARFBUZZ = definedIf(config.harfbuzz != null),
+        .FT_CONFIG_OPTION_USE_BROTLI = definedIf(config.brotli != null),
+    });
+
+    lib.addConfigHeader(ftoption);
+    lib.installConfigHeader(ftoption, .{});
 
     lib.addIncludePath("third_party/freetype/include");
 
@@ -88,39 +108,7 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
         "config/public-macros.h",
     }) |name| lib.installHeader(
         b.fmt("third_party/freetype/include/freetype/{s}", .{name}),
-        b.fmt("freetype2/freetype/{s}", .{name}),
-    );
-
-    const ftconfig = b.addConfigHeader(.{
-        .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
-        .include_path = "freetype/config/ftconfig.h",
-    }, .{
-        .HAVE_UNISTD_H = {},
-        .HAVE_FCNTL_H = {},
-    });
-
-    lib.addConfigHeader(ftconfig);
-    lib.installConfigHeader(
-        ftconfig,
-        .{ .dest_rel_path = "freetype2/freetype/config/ftconfig.h" },
-    );
-
-    const ftoption = b.addConfigHeader(.{
-        .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
-        .include_path = "freetype/config/ftoption.h",
-    }, .{
-        .FT_CONFIG_OPTION_USE_LZW = definedIf(config.zlib != null),
-        .FT_CONFIG_OPTION_USE_ZLIB = definedIf(config.zlib != null),
-        .FT_CONFIG_OPTION_USE_BZIP2 = definedIf(config.bzip2 != null),
-        .FT_CONFIG_OPTION_USE_PNG = definedIf(config.png != null),
-        .FT_CONFIG_OPTION_USE_HARFBUZZ = definedIf(config.harfbuzz != null),
-        .FT_CONFIG_OPTION_USE_BROTLI = definedIf(config.brotli != null),
-    });
-
-    lib.addConfigHeader(ftoption);
-    lib.installConfigHeader(
-        ftoption,
-        .{ .dest_rel_path = "freetype2/freetype/config/ftoption.h" },
+        b.fmt("freetype/{s}", .{name}),
     );
 
     lib.addCSourceFiles(&.{
@@ -172,6 +160,12 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
     }, &.{});
 
     lib.defineCMacro("FT2_BUILD_LIBRARY", null);
+
+    if (config.zlib) |l| lib.linkLibrary(l);
+    if (config.bzip2) |l| lib.linkLibrary(l);
+    if (config.png) |l| lib.linkLibrary(l);
+    if (config.harfbuzz) |l| lib.linkLibrary(l);
+    if (config.brotli) |l| lib.linkLibrary(l);
 
     return lib;
 }
