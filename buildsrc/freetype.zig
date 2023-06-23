@@ -23,16 +23,23 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
         .link_libc = true,
     });
 
-    const ftconfig = b.addConfigHeader(.{
-        .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
-        .include_path = "freetype/config/ftconfig.h",
-    }, .{
-        .HAVE_UNISTD_H = {},
-        .HAVE_FCNTL_H = {},
-    });
+    if (config.target.isWindows()) {
+        lib.installHeader(
+            "third_party/freetype/include/freetype/config/ftconfig.h",
+            "freetype/config/ftconfig.h",
+        );
+    } else {
+        const ftconfig = b.addConfigHeader(.{
+            .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
+            .include_path = "freetype/config/ftconfig.h",
+        }, .{
+            .HAVE_UNISTD_H = {},
+            .HAVE_FCNTL_H = {},
+        });
 
-    lib.addConfigHeader(ftconfig);
-    lib.installConfigHeader(ftconfig, .{});
+        lib.addConfigHeader(ftconfig);
+        lib.installConfigHeader(ftconfig, .{});
+    }
 
     const ftoption = b.addConfigHeader(.{
         .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
@@ -154,10 +161,17 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
         "third_party/freetype/src/winfonts/winfnt.c",
     }, &.{});
 
-    lib.addCSourceFiles(&.{
-        "third_party/freetype/builds/unix/ftsystem.c",
-        "third_party/freetype/src/base/ftdebug.c",
-    }, &.{});
+    if (config.target.isWindows()) {
+        lib.addCSourceFiles(&.{
+            "third_party/freetype/builds/windows/ftdebug.c",
+            "third_party/freetype/builds/windows/ftsystem.c",
+        }, &.{});
+    } else {
+        lib.addCSourceFiles(&.{
+            "third_party/freetype/builds/unix/ftsystem.c",
+            "third_party/freetype/src/base/ftdebug.c",
+        }, &.{});
+    }
 
     lib.defineCMacro("FT2_BUILD_LIBRARY", null);
 
