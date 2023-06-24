@@ -1,25 +1,17 @@
 const std = @import("std");
 
-const Build = std.Build;
-const CrossTarget = std.zig.CrossTarget;
-const OptimizeMode = std.builtin.OptimizeMode;
-const Step = Build.Step;
+const BuildContext = @import("BuildContext.zig");
 
-pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step.Compile {
-    const lib = b.addStaticLibrary(.{
-        .name = "freetype",
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
+pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
+    const lib = context.addStaticCLibrary("freetype");
 
-    if (target.isWindows()) {
+    if (context.target.isWindows()) {
         lib.installHeader(
             "third_party/freetype/include/freetype/config/ftconfig.h",
             "freetype/config/ftconfig.h",
         );
     } else {
-        const ftconfig = b.addConfigHeader(.{
+        const ftconfig = context.builder.addConfigHeader(.{
             .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
             .include_path = "freetype/config/ftconfig.h",
         }, .{
@@ -31,7 +23,7 @@ pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step
         lib.installConfigHeader(ftconfig, .{});
     }
 
-    const ftmodule = b.addConfigHeader(.{
+    const ftmodule = context.builder.addConfigHeader(.{
         .style = .{.cmake = .{.path = "buildsrc/ftmodule.h.in"}},
         .include_path = "freetype/config/ftmodule.h",
     }, .{});
@@ -39,7 +31,7 @@ pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step
     lib.addConfigHeader(ftmodule);
     lib.installConfigHeader(ftmodule, .{});
 
-    const ftoption = b.addConfigHeader(.{
+    const ftoption = context.builder.addConfigHeader(.{
         .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
         .include_path = "freetype/config/ftoption.h",
     }, .{
@@ -63,7 +55,7 @@ pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step
         .FT_CONFIG_OPTION_INCREMENTAL = null,
         .FT_RENDER_POOL_SIZE = 16384,
         .FT_MAX_MODULES = 32,
-        .FT_DEBUG_LEVEL_ERROR = optimize == .Debug,
+        .FT_DEBUG_LEVEL_ERROR = context.optimize == .Debug,
         .FT_DEBUG_LEVEL_TRACE = null,
         .FT_DEBUG_LOGGING = null,
         .FT_DEBUG_AUTOFIT = null,
@@ -172,8 +164,8 @@ pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step
         "config/mac-support.h",
         "config/public-macros.h",
     }) |name| lib.installHeader(
-        b.fmt("third_party/freetype/include/freetype/{s}", .{name}),
-        b.fmt("freetype/{s}", .{name}),
+        context.builder.fmt("third_party/freetype/include/freetype/{s}", .{name}),
+        context.builder.fmt("freetype/{s}", .{name}),
     );
 
     lib.addCSourceFiles(&.{
@@ -185,7 +177,7 @@ pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step
         "third_party/freetype/src/truetype/truetype.c",
     }, &.{});
 
-    if (target.isWindows()) {
+    if (context.target.isWindows()) {
         lib.addCSourceFiles(&.{
             "third_party/freetype/builds/windows/ftdebug.c",
             "third_party/freetype/builds/windows/ftsystem.c",

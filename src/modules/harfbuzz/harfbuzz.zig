@@ -245,14 +245,6 @@ pub const Blob = opaque {
         ));
     }
 
-    pub fn createFromFile(file_name: [*:0]const u8) *@This() {
-        return pointeeCast(@This(), c.hb_blob_create_from_file(file_name).?);
-    }
-
-    pub fn createFromFileOrFail(file_name: [*:0]const u8) ?*@This() {
-        return pointeeCast(@This(), c.hb_blob_create_from_file_or_fail(file_name));
-    }
-
     pub fn createSubBlob(self: *@This(), offset: c_uint, length: c_uint) *@This() {
         return pointeeCast(@This(), c.hb_blob_create_sub_blob(self.toC(), offset, length).?);
     }
@@ -443,7 +435,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getContentType(self: *const @This()) ContentType {
-        return @intToEnum(ContentType, c.hb_buffer_get_content_type(self.toC()));
+        return @enumFromInt(ContentType, c.hb_buffer_get_content_type(self.toC()));
     }
 
     pub fn setDirection(self: *@This(), direction: Direction) void {
@@ -451,7 +443,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getDirection(self: *const @This()) Direction {
-        return @intToEnum(Direction, c.hb_buffer_get_direction(self.toC()));
+        return @enumFromInt(Direction, c.hb_buffer_get_direction(self.toC()));
     }
 
     pub fn setScript(self: *@This(), script: Script) void {
@@ -459,7 +451,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getScript(self: *const @This()) Script {
-        return @intToEnum(Script, c.hb_buffer_get_script(self.toC()));
+        return @enumFromInt(Script, c.hb_buffer_get_script(self.toC()));
     }
 
     pub fn setLanguage(self: *@This(), language: *const Language) void {
@@ -500,7 +492,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getClusterLevel(self: *const @This()) ClusterLevel {
-        return @intToEnum(ClusterLevel, c.hb_buffer_get_cluster_level(self.toC()));
+        return @enumFromInt(ClusterLevel, c.hb_buffer_get_cluster_level(self.toC()));
     }
 
     pub fn setLength(self: *@This(), length: c_uint) !void {
@@ -531,8 +523,8 @@ pub const Buffer = opaque {
         var c_properties: c.hb_segment_properties_t = undefined;
         c.hb_buffer_get_segment_properties(self.toC(), &c_properties);
         return .{
-            .direction = @intToEnum(Direction, c_properties.direction),
-            .script = @intToEnum(Script, c_properties.script),
+            .direction = @enumFromInt(Direction, c_properties.direction),
+            .script = @enumFromInt(Script, c_properties.script),
             .language = pointeeCast(Language, c_properties.language),
         };
     }

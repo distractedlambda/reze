@@ -10,6 +10,7 @@ const MixedModule = @import("MixedModule.zig");
 builder: *Build,
 target: CrossTarget,
 optimize: OptimizeMode,
+single_threaded: bool,
 run_all_tests: *Step,
 project_modules: std.StringHashMapUnmanaged(*MixedModule) = .{},
 
@@ -20,6 +21,7 @@ pub fn create(builder: *Build) *@This() {
         .builder = builder,
         .target = builder.standardTargetOptions(.{}),
         .optimize = builder.standardOptimizeOption(.{}),
+        .single_threaded = builder.option(bool, "single_threaded", "") orelse false,
         .run_all_tests = builder.step("test", "Run all unit tests"),
     };
 
@@ -85,4 +87,20 @@ pub fn addProjectModuleUnitTests(self: *@This()) void {
 
         self.run_all_tests.dependOn(&run_tests.step);
     }
+}
+
+pub fn addStaticCLibrary(self: *@This(), name: []const u8) *Step.Compile {
+    return self.builder.addStaticLibrary(.{
+        .name = name,
+        .target = self.target,
+        .optimize = self.optimize,
+        .single_threaded = self.single_threaded,
+        .link_libc = true,
+    });
+}
+
+pub fn addStaticCppLibrary(self: *@This(), name: []const u8) *Step.Compile {
+    const lib = self.addStaticCLibrary(name);
+    lib.linkLibCpp();
+    return lib;
 }

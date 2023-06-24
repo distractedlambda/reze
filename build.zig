@@ -7,26 +7,23 @@ const BuildContext = @import("buildsrc/BuildContext.zig");
 pub fn build(b: *Build) void {
     const context = BuildContext.create(b);
 
+    const lib_freetype = @import("buildsrc/freetype.zig").addFreetype(context);
+    const lib_harfbuzz = @import("buildsrc/harfbuzz.zig").addHarfbuzz(context, lib_freetype);
+    const lib_glfw = @import("buildsrc/glfw.zig").addGlfw(context);
+
     const pm_common = context.projectModule("common");
 
     const pm_freetype = context.projectModule("freetype");
     pm_freetype.addMixedModule("common", pm_common);
-    pm_freetype.linkLibrary(
-        @import("buildsrc/freetype.zig")
-            .addFreetype(b, context.target, context.optimize),
-    );
+    pm_freetype.linkLibrary(lib_freetype);
 
     const pm_glfw = context.projectModule("glfw");
     pm_glfw.addMixedModule("common", pm_common);
-    pm_glfw.linkLibrary(
-        @import("buildsrc/glfw.zig")
-            .addGlfw(b, context.target, context.optimize),
-    );
+    pm_glfw.linkLibrary(lib_glfw);
 
     const pm_harfbuzz = context.projectModule("harfbuzz");
     pm_harfbuzz.addMixedModule("common", pm_common);
-    pm_harfbuzz.linkSystemLibrary("harfbuzz");
-    pm_harfbuzz.linkLibC();
+    pm_harfbuzz.linkLibrary(lib_harfbuzz);
 
     const pm_wasm = context.projectModule("wasm");
     _ = pm_wasm;

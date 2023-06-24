@@ -1,17 +1,9 @@
 const std = @import("std");
 
-const Build = std.Build;
-const CrossTarget = std.zig.CrossTarget;
-const OptimizeMode = std.builtin.OptimizeMode;
-const Step = Build.Step;
+const BuildContext = @import("BuildContext.zig");
 
-pub fn addGlfw(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step.Compile {
-    const lib = b.addStaticLibrary(.{
-        .name = "glfw",
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
+pub fn addGlfw(context: *BuildContext) *std.Build.Step.Compile {
+    const lib = context.addStaticCLibrary("glfw");
 
     lib.c_std = .C99;
 
@@ -29,7 +21,7 @@ pub fn addGlfw(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step.Com
         "third_party/glfw/src/window.c",
     }, &.{});
 
-    if (target.isWindows()) {
+    if (context.target.isWindows()) {
         lib.defineCMacro("_GLFW_WIN32", null);
         lib.defineCMacro("UNICODE", null);
         lib.defineCMacro("_UNICODE", null);
@@ -45,7 +37,7 @@ pub fn addGlfw(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step.Com
             "third_party/glfw/src/win32_time.c",
             "third_party/glfw/src/win32_window.c",
         }, &.{});
-    } else if (target.isDarwin()) {
+    } else if (context.target.isDarwin()) {
         lib.defineCMacro("_GLFW_COCOA", null);
         lib.linkFramework("Cocoa");
         lib.linkFramework("IOKit");
@@ -74,7 +66,7 @@ pub fn addGlfw(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step.Com
             "third_party/glfw/src/x11_monitor.c",
             "third_party/glfw/src/x11_window.c",
             "third_party/glfw/src/xkb_unicode.c",
-            if (target.isLinux())
+            if (context.target.isLinux())
                 "third_party/glfw/src/linux_joystick.c"
             else
                 "third_party/glfw/src/null_joystick.c",
