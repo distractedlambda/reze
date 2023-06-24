@@ -5,25 +5,15 @@ const CrossTarget = std.zig.CrossTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
 const Step = Build.Step;
 
-pub const Config = struct {
-    target: CrossTarget,
-    optimize: OptimizeMode,
-    zlib: ?*Step.Compile = null,
-    bzip2: ?*Step.Compile = null,
-    png: ?*Step.Compile = null,
-    harfbuzz: ?*Step.Compile = null,
-    brotli: ?*Step.Compile = null,
-};
-
-pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
+pub fn addFreetype(b: *Build, target: CrossTarget, optimize: OptimizeMode) *Step.Compile {
     const lib = b.addStaticLibrary(.{
         .name = "freetype",
-        .target = config.target,
-        .optimize = config.optimize,
+        .target = target,
+        .optimize = optimize,
         .link_libc = true,
     });
 
-    if (config.target.isWindows()) {
+    if (target.isWindows()) {
         lib.installHeader(
             "third_party/freetype/include/freetype/config/ftconfig.h",
             "freetype/config/ftconfig.h",
@@ -41,16 +31,85 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
         lib.installConfigHeader(ftconfig, .{});
     }
 
+    const ftmodule = b.addConfigHeader(.{
+        .style = .{.cmake = .{.path = "buildsrc/ftmodule.h.in"}},
+        .include_path = "freetype/config/ftmodule.h",
+    }, .{});
+
+    lib.addConfigHeader(ftmodule);
+    lib.installConfigHeader(ftmodule, .{});
+
     const ftoption = b.addConfigHeader(.{
         .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
         .include_path = "freetype/config/ftoption.h",
     }, .{
-        .FT_CONFIG_OPTION_USE_LZW = definedIf(config.zlib != null),
-        .FT_CONFIG_OPTION_USE_ZLIB = definedIf(config.zlib != null),
-        .FT_CONFIG_OPTION_USE_BZIP2 = definedIf(config.bzip2 != null),
-        .FT_CONFIG_OPTION_USE_PNG = definedIf(config.png != null),
-        .FT_CONFIG_OPTION_USE_HARFBUZZ = definedIf(config.harfbuzz != null),
-        .FT_CONFIG_OPTION_USE_BROTLI = definedIf(config.brotli != null),
+        .FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES = null,
+        .FT_CONFIG_OPTION_SUBPIXEL_RENDERING = null,
+        .FT_CONFIG_OPTION_FORCE_INT64 = null,
+        .FT_CONFIG_OPTION_NO_ASSEMBLER = null,
+        .FT_CONFIG_OPTION_INLINE_MULFIX = {},
+        .FT_CONFIG_OPTION_USE_LZW = null,
+        .FT_CONFIG_OPTION_USE_ZLIB = null,
+        .FT_CONFIG_OPTION_SYSTEM_ZLIB = null,
+        .FT_CONFIG_OPTION_USE_BZIP2 = null,
+        .FT_CONFIG_OPTION_DISABLE_STREAM_SUPPORT = {},
+        .FT_CONFIG_OPTION_USE_PNG = null,
+        .FT_CONFIG_OPTION_USE_HARFBUZZ = null,
+        .FT_CONFIG_OPTION_USE_BROTLI = null,
+        .FT_CONFIG_OPTION_POSTSCRIPT_NAMES = null,
+        .FT_CONFIG_OPTION_ADOBE_GLYPH_LIST = null,
+        .FT_CONFIG_OPTION_MAC_FONTS = null,
+        .FT_CONFIG_OPTION_GUESSING_EMBEDDED_RFORK = null,
+        .FT_CONFIG_OPTION_INCREMENTAL = null,
+        .FT_RENDER_POOL_SIZE = 16384,
+        .FT_MAX_MODULES = 32,
+        .FT_DEBUG_LEVEL_ERROR = optimize == .Debug,
+        .FT_DEBUG_LEVEL_TRACE = null,
+        .FT_DEBUG_LOGGING = null,
+        .FT_DEBUG_AUTOFIT = null,
+        .FT_DEBUG_MEMORY = null,
+        .FT_CONFIG_OPTION_USE_MODULE_ERRORS = null,
+        .FT_CONFIG_OPTION_SVG = null,
+        .FT_CONFIG_OPTION_ERROR_STRINGS = null,
+        .TT_CONFIG_OPTION_EMBEDDED_BITMAPS = null,
+        .TT_CONFIG_OPTION_COLOR_LAYERS = {},
+        .TT_CONFIG_OPTION_POSTSCRIPT_NAMES = null,
+        .TT_CONFIG_OPTION_SFNT_NAMES = null,
+        .TT_CONFIG_CMAP_FORMAT_0 = {},
+        .TT_CONFIG_CMAP_FORMAT_2 = null,
+        .TT_CONFIG_CMAP_FORMAT_4 = {},
+        .TT_CONFIG_CMAP_FORMAT_6 = {},
+        .TT_CONFIG_CMAP_FORMAT_8 = {},
+        .TT_CONFIG_CMAP_FORMAT_10 = {},
+        .TT_CONFIG_CMAP_FORMAT_12 = {},
+        .TT_CONFIG_CMAP_FORMAT_13 = {},
+        .TT_CONFIG_CMAP_FORMAT_14 = {},
+        .TT_CONFIG_OPTION_BYTECODE_INTERPRETER = {},
+        .TT_CONFIG_OPTION_SUBPIXEL_HINTING = 2,
+        .TT_CONFIG_OPTION_COMPONENT_OFFSET_SCALED = null,
+        .TT_CONFIG_OPTION_GX_VAR_SUPPORT = {},
+        .TT_CONFIG_OPTION_NO_BORING_EXPANSION = null,
+        .TT_CONFIG_OPTION_BDF = null,
+        .TT_CONFIG_OPTION_MAX_RUNNABLE_OPCODES = 1000000,
+        .T1_MAX_DICT_DEPTH = 5,
+        .T1_MAX_SUBRS_CALLS = 16,
+        .T1_MAX_CHARSTRINGS_OPERANDS = 256,
+        .T1_CONFIG_OPTION_NO_AFM = null,
+        .T1_CONFIG_OPTION_NO_MM_SUPPORT = null,
+        .T1_CONFIG_OPTION_OLD_ENGINE = null,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_X1 = 500,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y1 = 400,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_X2 = 1000,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y2 = 275,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_X3 = 1667,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y3 = 275,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_X4 = 2333,
+        .CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y4 = 0,
+        .CFF_CONFIG_OPTION_OLD_ENGINE = null,
+        .PCF_CONFIG_OPTION_LONG_FAMILY_NAMES = null,
+        .AF_CONFIG_OPTION_CJK = {},
+        .AF_CONFIG_OPTION_INDIC = {},
+        .AF_CONFIG_OPTION_TT_SIZE_METRICS = null,
     });
 
     lib.addConfigHeader(ftoption);
@@ -108,7 +167,6 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
         "tttables.h",
         "tttags.h",
         "config/ftheader.h",
-        "config/ftmodule.h",
         "config/ftstdlib.h",
         "config/integer-types.h",
         "config/mac-support.h",
@@ -121,47 +179,13 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
     lib.addCSourceFiles(&.{
         "third_party/freetype/src/autofit/autofit.c",
         "third_party/freetype/src/base/ftbase.c",
-        "third_party/freetype/src/base/ftbbox.c",
-        "third_party/freetype/src/base/ftbdf.c",
-        "third_party/freetype/src/base/ftbitmap.c",
-        "third_party/freetype/src/base/ftcid.c",
-        "third_party/freetype/src/base/ftfstype.c",
-        "third_party/freetype/src/base/ftgasp.c",
-        "third_party/freetype/src/base/ftglyph.c",
-        "third_party/freetype/src/base/ftgxval.c",
         "third_party/freetype/src/base/ftinit.c",
-        "third_party/freetype/src/base/ftmm.c",
-        "third_party/freetype/src/base/ftotval.c",
-        "third_party/freetype/src/base/ftpatent.c",
-        "third_party/freetype/src/base/ftpfr.c",
-        "third_party/freetype/src/base/ftstroke.c",
-        "third_party/freetype/src/base/ftsynth.c",
-        "third_party/freetype/src/base/fttype1.c",
-        "third_party/freetype/src/base/ftwinfnt.c",
-        "third_party/freetype/src/bdf/bdf.c",
-        "third_party/freetype/src/bzip2/ftbzip2.c",
-        "third_party/freetype/src/cache/ftcache.c",
-        "third_party/freetype/src/cff/cff.c",
-        "third_party/freetype/src/cid/type1cid.c",
-        "third_party/freetype/src/gzip/ftgzip.c",
-        "third_party/freetype/src/lzw/ftlzw.c",
-        "third_party/freetype/src/pcf/pcf.c",
-        "third_party/freetype/src/pfr/pfr.c",
-        "third_party/freetype/src/psaux/psaux.c",
-        "third_party/freetype/src/pshinter/pshinter.c",
-        "third_party/freetype/src/psnames/psnames.c",
-        "third_party/freetype/src/raster/raster.c",
-        "third_party/freetype/src/sdf/sdf.c",
         "third_party/freetype/src/sfnt/sfnt.c",
         "third_party/freetype/src/smooth/smooth.c",
-        "third_party/freetype/src/svg/svg.c",
         "third_party/freetype/src/truetype/truetype.c",
-        "third_party/freetype/src/type1/type1.c",
-        "third_party/freetype/src/type42/type42.c",
-        "third_party/freetype/src/winfonts/winfnt.c",
     }, &.{});
 
-    if (config.target.isWindows()) {
+    if (target.isWindows()) {
         lib.addCSourceFiles(&.{
             "third_party/freetype/builds/windows/ftdebug.c",
             "third_party/freetype/builds/windows/ftsystem.c",
@@ -174,12 +198,6 @@ pub fn addFreetype(b: *Build, config: Config) *Step.Compile {
     }
 
     lib.defineCMacro("FT2_BUILD_LIBRARY", null);
-
-    if (config.zlib) |l| lib.linkLibrary(l);
-    if (config.bzip2) |l| lib.linkLibrary(l);
-    if (config.png) |l| lib.linkLibrary(l);
-    if (config.harfbuzz) |l| lib.linkLibrary(l);
-    if (config.brotli) |l| lib.linkLibrary(l);
 
     return lib;
 }

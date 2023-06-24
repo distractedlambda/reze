@@ -9,37 +9,19 @@ pub fn build(b: *Build) void {
 
     const pm_common = context.projectModule("common");
 
-    const zlib = @import("buildsrc/zlib.zig").addZlib(b, .{
-        .target = context.target,
-        .optimize = context.optimize,
-    });
-
-    const libpng = @import("buildsrc/libpng.zig").addLibpng(b, .{
-        .target = context.target,
-        .optimize = context.optimize,
-        .zlib = zlib,
-    });
-
     const pm_freetype = context.projectModule("freetype");
     pm_freetype.addMixedModule("common", pm_common);
-    pm_freetype.linkLibrary(@import("buildsrc/freetype.zig").addFreetype(b, .{
-        .target = context.target,
-        .optimize = context.optimize,
-        .zlib = zlib,
-        .png = libpng,
-    }));
-
-    const pm_fontconfig = context.projectModule("fontconfig");
-    pm_fontconfig.linkSystemLibrary("fontconfig");
-    pm_fontconfig.linkLibC();
+    pm_freetype.linkLibrary(
+        @import("buildsrc/freetype.zig")
+            .addFreetype(b, context.target, context.optimize),
+    );
 
     const pm_glfw = context.projectModule("glfw");
     pm_glfw.addMixedModule("common", pm_common);
-    pm_glfw.linkLibrary(@import("buildsrc/glfw.zig").addGlfw(b, .{
-        .target = context.target,
-        .optimize = context.optimize,
-        .vulkan_loader = null,
-    }));
+    pm_glfw.linkLibrary(
+        @import("buildsrc/glfw.zig")
+            .addGlfw(b, context.target, context.optimize),
+    );
 
     const pm_harfbuzz = context.projectModule("harfbuzz");
     pm_harfbuzz.addMixedModule("common", pm_common);
