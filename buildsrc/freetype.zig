@@ -24,7 +24,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
     }
 
     const ftmodule = context.addConfigHeader(.{
-        .style = .{.cmake = .{.path = "buildsrc/ftmodule.h.in"}},
+        .style = .{ .autoconf = .{ .path = "buildsrc/ftmodule.h.in" } },
         .include_path = "freetype/config/ftmodule.h",
     }, .{});
 
@@ -32,7 +32,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
     lib.installConfigHeader(ftmodule, .{});
 
     const ftoption = context.addConfigHeader(.{
-        .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
+        .style = .{ .autoconf = .{ .path = "buildsrc/ftoption.h.in" } },
         .include_path = "freetype/config/ftoption.h",
     }, .{
         .FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES = null,

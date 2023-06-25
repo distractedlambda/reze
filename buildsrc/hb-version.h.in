@@ -41,26 +41,26 @@ HB_BEGIN_DECLS
  *
  * The major component of the library version available at compile-time.
  */
-#cmakedefine HB_VERSION_MAJOR @HB_VERSION_MAJOR@
+#undef HB_VERSION_MAJOR
 /**
  * HB_VERSION_MINOR:
  *
  * The minor component of the library version available at compile-time.
  */
-#cmakedefine HB_VERSION_MINOR @HB_VERSION_MINOR@
+#undef HB_VERSION_MINOR
 /**
  * HB_VERSION_MICRO:
  *
  * The micro component of the library version available at compile-time.
  */
-#cmakedefine HB_VERSION_MICRO @HB_VERSION_MICRO@
+#undef HB_VERSION_MICRO
 
 /**
  * HB_VERSION_STRING:
  *
  * A string literal containing the library version available at compile-time.
  */
-#cmakedefine HB_VERSION_STRING "@HB_VERSION@"
+#undef HB_VERSION_STRING
 
 /**
  * HB_VERSION_ATLEAST:

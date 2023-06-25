@@ -41,70 +41,70 @@ HB_BEGIN_DECLS
  *
  * Defined if Harfbuzz has been built with cairo support.
  */
-#cmakedefine HB_HAS_CAIRO
+#undef HB_HAS_CAIRO
 
 /**
  * HB_HAS_CORETEXT:
  *
  * Defined if Harfbuzz has been built with CoreText support.
  */
-#cmakedefine HB_HAS_CORETEXT
+#undef HB_HAS_CORETEXT
 
 /**
  * HB_HAS_DIRECTWRITE:
  *
  * Defined if Harfbuzz has been built with DirectWrite support.
  */
-#cmakedefine HB_HAS_DIRECTWRITE
+#undef HB_HAS_DIRECTWRITE
 
 /**
  * HB_HAS_FREETYPE:
  *
  * Defined if Harfbuzz has been built with Freetype support.
  */
-#cmakedefine HB_HAS_FREETYPE
+#undef HB_HAS_FREETYPE
 
 /**
  * HB_HAS_GDI:
  *
  * Defined if Harfbuzz has been built with GDI support.
  */
-#cmakedefine HB_HAS_GDI
+#undef HB_HAS_GDI
 
 /**
  * HB_HAS_GLIB:
  *
  * Defined if Harfbuzz has been built with GLib support.
  */
-#cmakedefine HB_HAS_GLIB
+#undef HB_HAS_GLIB
 
 /**
  * HB_HAS_GOBJECT:
  *
  * Defined if Harfbuzz has been built with GObject support.
  */
-#cmakedefine HB_HAS_GOBJECT
+#undef HB_HAS_GOBJECT
 
 /**
  * HB_HAS_GRAPHITE:
  *
  * Defined if Harfbuzz has been built with Graphite support.
  */
-#cmakedefine HB_HAS_GRAPHITE
+#undef HB_HAS_GRAPHITE
 
 /**
  * HB_HAS_ICU:
  *
  * Defined if Harfbuzz has been built with ICU support.
  */
-#cmakedefine HB_HAS_ICU
+#undef HB_HAS_ICU
 
 /**
  * HB_HAS_UNISCRIBE:
  *
  * Defined if Harfbuzz has been built with Uniscribe support.
  */
-#cmakedefine HB_HAS_UNISCRIBE
+#undef HB_HAS_UNISCRIBE
 
 
 HB_END_DECLS

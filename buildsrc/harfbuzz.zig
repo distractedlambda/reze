@@ -65,7 +65,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
     lib.addConfigHeader(config_h);
 
     const hb_version_h = context.addConfigHeader(.{
-        .style = .{ .cmake = .{ .path = "buildsrc/hb-version.h.in" } },
+        .style = .{ .autoconf = .{ .path = "buildsrc/hb-version.h.in" } },
         .include_path = "hb-version.h",
     }, .{
         .HB_VERSION_MAJOR = 7,
@@ -78,7 +78,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
     lib.installConfigHeader(hb_version_h, .{ .dest_rel_path = "harfbuzz/hb-version.h" });
 
     const hb_features_h = context.addConfigHeader(.{
-        .style = .{ .cmake = .{ .path = "buildsrc/hb-features.h.in" } },
+        .style = .{ .autoconf = .{ .path = "buildsrc/hb-features.h.in" } },
         .include_path = "hb-features.h",
     }, .{
         .HB_HAS_CAIRO = null,

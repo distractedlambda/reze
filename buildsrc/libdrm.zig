@@ -33,6 +33,8 @@ pub fn addLibdrm(context: *BuildContext) *Step.Compile {
         ._GNU_SOURCE = 1,
     }));
 
+    // Just copying the file, as a workaround for not being able to directly include a generated
+    // file
     lib.addConfigHeader(context.addConfigHeader(.{
         .style = .{ .autoconf = genFormatModStaticTable(context) },
         .include_path = "generated_static_table_fourcc.h",

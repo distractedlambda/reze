@@ -109,7 +109,7 @@ FT_BEGIN_HEADER
    * ```
    *
    */
-#cmakedefine FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES
+#undef FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES
 
 
   /**************************************************************************
@@ -123,7 +123,7 @@ FT_BEGIN_HEADER
    * When this macro is not defined, FreeType offers alternative LCD
    * rendering technology that produces excellent output.
    */
-#cmakedefine FT_CONFIG_OPTION_SUBPIXEL_RENDERING
+#undef FT_CONFIG_OPTION_SUBPIXEL_RENDERING
 
 
   /**************************************************************************
@@ -143,7 +143,7 @@ FT_BEGIN_HEADER
    *         file `ftconfig.h` either statically or through the `configure`
    *         script on supported platforms.
    */
-#cmakedefine FT_CONFIG_OPTION_FORCE_INT64
+#undef FT_CONFIG_OPTION_FORCE_INT64
 
 
   /**************************************************************************
@@ -153,7 +153,7 @@ FT_BEGIN_HEADER
    * that to verify that the assembler function works properly, or to execute
    * benchmark tests of the various implementations.
    */
-#cmakedefine FT_CONFIG_OPTION_NO_ASSEMBLER
+#undef FT_CONFIG_OPTION_NO_ASSEMBLER
 
 
   /**************************************************************************
@@ -165,7 +165,7 @@ FT_BEGIN_HEADER
    * Note that if your compiler or CPU is not supported, this will default to
    * the standard and portable implementation found in `ftcalc.c`.
    */
-#cmakedefine FT_CONFIG_OPTION_INLINE_MULFIX
+#undef FT_CONFIG_OPTION_INLINE_MULFIX
 
 
   /**************************************************************************
@@ -180,7 +180,7 @@ FT_BEGIN_HEADER
    *
    *   Define this macro if you want to enable this 'feature'.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_LZW
+#undef FT_CONFIG_OPTION_USE_LZW
 
 
   /**************************************************************************
@@ -195,7 +195,7 @@ FT_BEGIN_HEADER
    *   Define this macro if you want to enable this 'feature'.  See also the
    *   macro `FT_CONFIG_OPTION_SYSTEM_ZLIB` below.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_ZLIB
+#undef FT_CONFIG_OPTION_USE_ZLIB
 
 
   /**************************************************************************
@@ -224,7 +224,7 @@ FT_BEGIN_HEADER
    *   `configure` script) and you define this macro, you also have to pass
    *   `SYSTEM_ZLIB=yes` as an argument to make.
    */
-#cmakedefine FT_CONFIG_OPTION_SYSTEM_ZLIB
+#undef FT_CONFIG_OPTION_SYSTEM_ZLIB
 
 
   /**************************************************************************
@@ -244,7 +244,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_BZIP2
+#undef FT_CONFIG_OPTION_USE_BZIP2
 
 
   /**************************************************************************
@@ -255,7 +255,7 @@ FT_BEGIN_HEADER
    * stream support, in the cases where file stream support is not necessary
    * such as memory loading of font files.
    */
-#cmakedefine FT_CONFIG_OPTION_DISABLE_STREAM_SUPPORT
+#undef FT_CONFIG_OPTION_DISABLE_STREAM_SUPPORT
 
 
   /**************************************************************************
@@ -273,7 +273,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_PNG
+#undef FT_CONFIG_OPTION_USE_PNG
 
 
   /**************************************************************************
@@ -290,7 +290,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_HARFBUZZ
+#undef FT_CONFIG_OPTION_USE_HARFBUZZ
 
 
   /**************************************************************************
@@ -306,7 +306,7 @@ FT_BEGIN_HEADER
    *   options set by those programs have precedence, overwriting the value
    *   here with the configured one.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_BROTLI
+#undef FT_CONFIG_OPTION_USE_BROTLI
 
 
   /**************************************************************************
@@ -331,7 +331,7 @@ FT_BEGIN_HEADER
    *   You would normally undefine this configuration macro when building a
    *   version of FreeType that doesn't contain a Type~1 or CFF driver.
    */
-#cmakedefine FT_CONFIG_OPTION_POSTSCRIPT_NAMES
+#undef FT_CONFIG_OPTION_POSTSCRIPT_NAMES
 
 
   /**************************************************************************
@@ -348,7 +348,7 @@ FT_BEGIN_HEADER
    *   in your 'psnames' module.  The Type~1 driver will not be able to
    *   synthesize a Unicode charmap out of the glyphs found in the fonts.
    */
-#cmakedefine FT_CONFIG_OPTION_ADOBE_GLYPH_LIST
+#undef FT_CONFIG_OPTION_ADOBE_GLYPH_LIST
 
 
   /**************************************************************************
@@ -361,7 +361,7 @@ FT_BEGIN_HEADER
    *
    *   Note that the 'FOND' resource isn't checked.
    */
-#cmakedefine FT_CONFIG_OPTION_MAC_FONTS
+#undef FT_CONFIG_OPTION_MAC_FONTS
 
 
   /**************************************************************************
@@ -381,7 +381,7 @@ FT_BEGIN_HEADER
    *   the `FT_CONFIG_OPTION_MAC_FONTS` option.
    */
 #ifdef FT_CONFIG_OPTION_MAC_FONTS
-#cmakedefine FT_CONFIG_OPTION_GUESSING_EMBEDDED_RFORK
+#undef FT_CONFIG_OPTION_GUESSING_EMBEDDED_RFORK
 #endif
 
 
@@ -393,7 +393,7 @@ FT_BEGIN_HEADER
    * incrementally as the document is parsed, such as the Ghostscript
    * interpreter for the PostScript language.
    */
-#cmakedefine FT_CONFIG_OPTION_INCREMENTAL
+#undef FT_CONFIG_OPTION_INCREMENTAL
 
 
   /**************************************************************************
@@ -401,7 +401,7 @@ FT_BEGIN_HEADER
    * The size in bytes of the render pool used by the scan-line converter to
    * do all of its work.
    */
-#cmakedefine FT_RENDER_POOL_SIZE @FT_RENDER_POOL_SIZE@L
+#undef FT_RENDER_POOL_SIZE
 
 
   /**************************************************************************
@@ -411,7 +411,7 @@ FT_BEGIN_HEADER
    *   The maximum number of modules that can be registered in a single
    *   FreeType library object.  32~is the default.
    */
-#cmakedefine FT_MAX_MODULES @FT_MAX_MODULES@
+#undef FT_MAX_MODULES
 
 
   /**************************************************************************
@@ -430,8 +430,8 @@ FT_BEGIN_HEADER
    *   Do not `#undef` these macros here since the build system might define
    *   them for certain configurations only.
    */
-#cmakedefine FT_DEBUG_LEVEL_ERROR
-#cmakedefine FT_DEBUG_LEVEL_TRACE
+#undef FT_DEBUG_LEVEL_ERROR
+#undef FT_DEBUG_LEVEL_TRACE
 
 
   /**************************************************************************
@@ -448,7 +448,7 @@ FT_BEGIN_HEADER
    *
    *   This option needs a C99 compiler.
    */
-#cmakedefine FT_DEBUG_LOGGING
+#undef FT_DEBUG_LOGGING
 
 
   /**************************************************************************
@@ -489,7 +489,7 @@ FT_BEGIN_HEADER
    *   Do not `#undef` these macros here since the build system might define
    *   them for certain configurations only.
    */
-#cmakedefine FT_DEBUG_AUTOFIT
+#undef FT_DEBUG_AUTOFIT
 
 
   /**************************************************************************
@@ -507,7 +507,7 @@ FT_BEGIN_HEADER
    *   Do not `#undef` this macro here since the build system might define it
    *   for certain configurations only.
    */
-#cmakedefine FT_DEBUG_MEMORY
+#undef FT_DEBUG_MEMORY
 
 
   /**************************************************************************
@@ -524,7 +524,7 @@ FT_BEGIN_HEADER
    *
    *   More details can be found in the files `ftmoderr.h` and `fterrors.h`.
    */
-#cmakedefine FT_CONFIG_OPTION_USE_MODULE_ERRORS
+#undef FT_CONFIG_OPTION_USE_MODULE_ERRORS
 
 
   /**************************************************************************
@@ -538,7 +538,7 @@ FT_BEGIN_HEADER
    *
    *   More details on the hooks can be found in file `otsvg.h`.
    */
-#cmakedefine FT_CONFIG_OPTION_SVG
+#undef FT_CONFIG_OPTION_SVG
 
 
   /**************************************************************************
@@ -551,7 +551,7 @@ FT_BEGIN_HEADER
    *
    *   More details can be found in the file `fterrors.h`.
    */
-#cmakedefine FT_CONFIG_OPTION_ERROR_STRINGS
+#undef FT_CONFIG_OPTION_ERROR_STRINGS
 
 
   /*************************************************************************/
@@ -569,7 +569,7 @@ FT_BEGIN_HEADER
    * embedded bitmaps in all formats using the 'sfnt' module (namely
    * TrueType~& OpenType).
    */
-#cmakedefine TT_CONFIG_OPTION_EMBEDDED_BITMAPS
+#undef TT_CONFIG_OPTION_EMBEDDED_BITMAPS
 
 
   /**************************************************************************
@@ -578,7 +578,7 @@ FT_BEGIN_HEADER
    * outlines (from the 'COLR'/'CPAL' tables) in all formats using the 'sfnt'
    * module (namely TrueType~& OpenType).
    */
-#cmakedefine TT_CONFIG_OPTION_COLOR_LAYERS
+#undef TT_CONFIG_OPTION_COLOR_LAYERS
 
 
   /**************************************************************************
@@ -593,7 +593,7 @@ FT_BEGIN_HEADER
    *
    * (By default, the module uses 'psnames' to extract glyph names.)
    */
-#cmakedefine TT_CONFIG_OPTION_POSTSCRIPT_NAMES
+#undef TT_CONFIG_OPTION_POSTSCRIPT_NAMES
 
 
   /**************************************************************************
@@ -607,7 +607,7 @@ FT_BEGIN_HEADER
    * Accessing SFNT names is done through the functions declared in
    * `ftsnames.h`.
    */
-#cmakedefine TT_CONFIG_OPTION_SFNT_NAMES
+#undef TT_CONFIG_OPTION_SFNT_NAMES
 
 
   /**************************************************************************
@@ -617,15 +617,15 @@ FT_BEGIN_HEADER
    *   Here you can fine-tune which TrueType CMap table format shall be
    *   supported.
    */
-#cmakedefine TT_CONFIG_CMAP_FORMAT_0
-#cmakedefine TT_CONFIG_CMAP_FORMAT_2
-#cmakedefine TT_CONFIG_CMAP_FORMAT_4
-#cmakedefine TT_CONFIG_CMAP_FORMAT_6
-#cmakedefine TT_CONFIG_CMAP_FORMAT_8
-#cmakedefine TT_CONFIG_CMAP_FORMAT_10
-#cmakedefine TT_CONFIG_CMAP_FORMAT_12
-#cmakedefine TT_CONFIG_CMAP_FORMAT_13
-#cmakedefine TT_CONFIG_CMAP_FORMAT_14
+#undef TT_CONFIG_CMAP_FORMAT_0
+#undef TT_CONFIG_CMAP_FORMAT_2
+#undef TT_CONFIG_CMAP_FORMAT_4
+#undef TT_CONFIG_CMAP_FORMAT_6
+#undef TT_CONFIG_CMAP_FORMAT_8
+#undef TT_CONFIG_CMAP_FORMAT_10
+#undef TT_CONFIG_CMAP_FORMAT_12
+#undef TT_CONFIG_CMAP_FORMAT_13
+#undef TT_CONFIG_CMAP_FORMAT_14
 
 
   /*************************************************************************/
@@ -647,7 +647,7 @@ FT_BEGIN_HEADER
    * Do not `#undef` this macro here, since the build system might define it
    * for certain configurations only.
    */
-#cmakedefine TT_CONFIG_OPTION_BYTECODE_INTERPRETER
+#undef TT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 
   /**************************************************************************
@@ -705,7 +705,7 @@ FT_BEGIN_HEADER
    * [1]
    * https://www.microsoft.com/typography/cleartype/truetypecleartype.aspx
    */
-#cmakedefine TT_CONFIG_OPTION_SUBPIXEL_HINTING @TT_CONFIG_OPTION_SUBPIXEL_HINTING@
+#undef TT_CONFIG_OPTION_SUBPIXEL_HINTING
 
 
   /**************************************************************************
@@ -724,7 +724,7 @@ FT_BEGIN_HEADER
    *   https://www.microsoft.com/typography/otspec/glyf.htm
    *   https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6glyf.html
    */
-#cmakedefine TT_CONFIG_OPTION_COMPONENT_OFFSET_SCALED
+#undef TT_CONFIG_OPTION_COMPONENT_OFFSET_SCALED
 
 
   /**************************************************************************
@@ -734,7 +734,7 @@ FT_BEGIN_HEADER
    * 'avar' tables).  Tagged 'Font Variations', this is now part of OpenType
    * also.  This has many similarities to Type~1 Multiple Masters support.
    */
-#cmakedefine TT_CONFIG_OPTION_GX_VAR_SUPPORT
+#undef TT_CONFIG_OPTION_GX_VAR_SUPPORT
 
 
   /**************************************************************************
@@ -752,7 +752,7 @@ FT_BEGIN_HEADER
    * the near future, since it is assumed that eventually those features are
    * added to the OpenType standard.
    */
-#cmakedefine TT_CONFIG_OPTION_NO_BORING_EXPANSION
+#undef TT_CONFIG_OPTION_NO_BORING_EXPANSION
 
 
   /**************************************************************************
@@ -760,7 +760,7 @@ FT_BEGIN_HEADER
    * Define `TT_CONFIG_OPTION_BDF` if you want to include support for an
    * embedded 'BDF~' table within SFNT-based bitmap formats.
    */
-#cmakedefine TT_CONFIG_OPTION_BDF
+#undef TT_CONFIG_OPTION_BDF
 
 
   /**************************************************************************
@@ -771,7 +771,7 @@ FT_BEGIN_HEADER
    * to change this except for very special situations (e.g., making a
    * library fuzzer spend less time to handle broken fonts).
    */
-#cmakedefine TT_CONFIG_OPTION_MAX_RUNNABLE_OPCODES @TT_CONFIG_OPTION_MAX_RUNNABLE_OPCODES@L
+#undef TT_CONFIG_OPTION_MAX_RUNNABLE_OPCODES
 
 
   /*************************************************************************/
@@ -788,7 +788,7 @@ FT_BEGIN_HEADER
    * `T1_MAX_DICT_DEPTH` is the maximum depth of nest dictionaries and arrays
    * in the Type~1 stream (see `t1load.c`).  A minimum of~4 is required.
    */
-#cmakedefine T1_MAX_DICT_DEPTH @T1_MAX_DICT_DEPTH@
+#undef T1_MAX_DICT_DEPTH
 
 
   /**************************************************************************
@@ -796,7 +796,7 @@ FT_BEGIN_HEADER
    * `T1_MAX_SUBRS_CALLS` details the maximum number of nested sub-routine
    * calls during glyph loading.
    */
-#cmakedefine T1_MAX_SUBRS_CALLS @T1_MAX_SUBRS_CALLS@
+#undef T1_MAX_SUBRS_CALLS
 
 
   /**************************************************************************
@@ -807,7 +807,7 @@ FT_BEGIN_HEADER
    * The Chinese font 'MingTiEG-Medium' (covering the CNS 11643 character
    * set) needs 256.
    */
-#cmakedefine T1_MAX_CHARSTRINGS_OPERANDS @T1_MAX_CHARSTRINGS_OPERANDS@
+#undef T1_MAX_CHARSTRINGS_OPERANDS
 
 
   /**************************************************************************
@@ -817,7 +817,7 @@ FT_BEGIN_HEADER
    * into an existing face.  Note that if set, the Type~1 driver will be
    * unable to produce kerning distances.
    */
-#cmakedefine T1_CONFIG_OPTION_NO_AFM
+#undef T1_CONFIG_OPTION_NO_AFM
 
 
   /**************************************************************************
@@ -825,7 +825,7 @@ FT_BEGIN_HEADER
    * Define this configuration macro if you want to prevent the compilation
    * of the Multiple Masters font support in the Type~1 driver.
    */
-#cmakedefine T1_CONFIG_OPTION_NO_MM_SUPPORT
+#undef T1_CONFIG_OPTION_NO_MM_SUPPORT
 
 
   /**************************************************************************
@@ -835,7 +835,7 @@ FT_BEGIN_HEADER
    * switch between the two engines using the `hinting-engine` property of
    * the 'type1' driver module.
    */
-#cmakedefine T1_CONFIG_OPTION_OLD_ENGINE
+#undef T1_CONFIG_OPTION_OLD_ENGINE
 
 
   /*************************************************************************/
@@ -857,17 +857,17 @@ FT_BEGIN_HEADER
    *
    * Do **not** undefine these macros!
    */
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_X1 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_X1@
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y1 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y1@
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_X1
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y1
 
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_X2 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_X2@
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y2 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y2@
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_X2
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y2
 
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_X3 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_X3@
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y3 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y3@
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_X3
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y3
 
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_X4 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_X4@
-#cmakedefine CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y4 @CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y4@
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_X4
+#undef CFF_CONFIG_OPTION_DARKENING_PARAMETER_Y4
 
 
   /**************************************************************************
@@ -877,7 +877,7 @@ FT_BEGIN_HEADER
    * between the two engines using the `hinting-engine` property of the 'cff'
    * driver module.
    */
-#cmakedefine CFF_CONFIG_OPTION_OLD_ENGINE
+#undef CFF_CONFIG_OPTION_OLD_ENGINE
 
 
   /*************************************************************************/
@@ -904,7 +904,7 @@ FT_BEGIN_HEADER
    * If this option is activated, it can be controlled with the
    * `no-long-family-names` property of the 'pcf' driver module.
    */
-#cmakedefine PCF_CONFIG_OPTION_LONG_FAMILY_NAMES
+#undef PCF_CONFIG_OPTION_LONG_FAMILY_NAMES
 
 
   /*************************************************************************/
@@ -921,7 +921,7 @@ FT_BEGIN_HEADER
    * Compile 'autofit' module with CJK (Chinese, Japanese, Korean) script
    * support.
    */
-#cmakedefine AF_CONFIG_OPTION_CJK
+#undef AF_CONFIG_OPTION_CJK
 
 
   /**************************************************************************
@@ -931,7 +931,7 @@ FT_BEGIN_HEADER
    * (yet) handle.  Currently, this needs option `AF_CONFIG_OPTION_CJK`.
    */
 #ifdef AF_CONFIG_OPTION_CJK
-#cmakedefine AF_CONFIG_OPTION_INDIC
+#undef AF_CONFIG_OPTION_INDIC
 #endif
 
 
@@ -955,7 +955,7 @@ FT_BEGIN_HEADER
    *
    * This problematic commit is now reverted (more or less).
    */
-#cmakedefine AF_CONFIG_OPTION_TT_SIZE_METRICS
+#undef AF_CONFIG_OPTION_TT_SIZE_METRICS
 
   /* */
 
