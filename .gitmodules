@@ -10,3 +10,6 @@
 [submodule "third_party/OpenGL-Registry"]
 	path = third_party/OpenGL-Registry
 	url = https://github.com/KhronosGroup/OpenGL-Registry.git
+[submodule "third_party/drm"]
+	path = third_party/libdrm
+	url = https://gitlab.freedesktop.org/mesa/drm.git

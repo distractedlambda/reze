@@ -12,6 +12,7 @@ target: CrossTarget,
 optimize: OptimizeMode,
 single_threaded: bool,
 run_all_tests: *Step,
+python_program: ?[]const u8,
 project_modules: std.StringHashMapUnmanaged(*MixedModule) = .{},
 
 pub fn create(builder: *Build) *@This() {
@@ -23,6 +24,14 @@ pub fn create(builder: *Build) *@This() {
         .optimize = builder.standardOptimizeOption(.{}),
         .single_threaded = builder.option(bool, "single_threaded", "") orelse false,
         .run_all_tests = builder.step("test", "Run all unit tests"),
+        .python_program = builder.option(
+            []const u8,
+            "python",
+            "Python interpreter executable",
+        ) orelse builder.findProgram(
+            &.{ "python3", "python" },
+            &.{},
+        ) catch null,
     };
 
     return self;
@@ -36,7 +45,14 @@ pub fn addApp(self: *@This(), name: []const u8) *Step.Compile {
         .optimize = self.optimize,
     });
 
-    self.builder.installArtifact(app);
+    const install = &self.builder.addInstallArtifact(app).step;
+
+    self.builder.step(
+        name,
+        self.fmt("Build and install the '{s}' executable", .{name}),
+    ).dependOn(install);
+
+    self.builder.getInstallStep().dependOn(install);
 
     return app;
 }
@@ -103,4 +119,21 @@ pub fn addStaticCppLibrary(self: *@This(), name: []const u8) *Step.Compile {
     const lib = self.addStaticCLibrary(name);
     lib.linkLibCpp();
     return lib;
+}
+
+pub fn fmt(self: *@This(), comptime format: []const u8, args: anytype) []u8 {
+    return self.builder.fmt(format, args);
+}
+
+pub fn addConfigHeader(
+    self: *@This(),
+    options: Step.ConfigHeader.Options,
+    values: anytype,
+) *Step.ConfigHeader {
+    const config_header = self.builder.addConfigHeader(options, values);
+
+    // Work around bug in std.Build
+    if (options.style.getFileSource()) |fs| fs.addStepDependencies(&config_header.step);
+
+    return config_header;
 }

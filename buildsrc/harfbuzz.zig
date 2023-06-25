@@ -20,7 +20,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
 
     lib.defineCMacro("HAVE_CONFIG_H", null);
 
-    const config_h = context.builder.addConfigHeader(.{
+    const config_h = context.addConfigHeader(.{
         .include_path = "config.h",
     }, .{
         .HAVE_GLIB = null,
@@ -64,7 +64,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
 
     lib.addConfigHeader(config_h);
 
-    const hb_version_h = context.builder.addConfigHeader(.{
+    const hb_version_h = context.addConfigHeader(.{
         .style = .{ .cmake = .{ .path = "buildsrc/hb-version.h.in" } },
         .include_path = "hb-version.h",
     }, .{
@@ -77,7 +77,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
     lib.addConfigHeader(hb_version_h);
     lib.installConfigHeader(hb_version_h, .{ .dest_rel_path = "harfbuzz/hb-version.h" });
 
-    const hb_features_h = context.builder.addConfigHeader(.{
+    const hb_features_h = context.addConfigHeader(.{
         .style = .{ .cmake = .{ .path = "buildsrc/hb-features.h.in" } },
         .include_path = "hb-features.h",
     }, .{
@@ -130,8 +130,8 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
         "hb-unicode.h",
         "hb.h",
     }) |name| lib.installHeader(
-        context.builder.fmt("third_party/harfbuzz/src/{s}", .{name}),
-        context.builder.fmt("harfbuzz/{s}", .{name}),
+        context.fmt("third_party/harfbuzz/src/{s}", .{name}),
+        context.fmt("harfbuzz/{s}", .{name}),
     );
 
     lib.addCSourceFiles(&.{

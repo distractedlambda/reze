@@ -11,7 +11,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
             "freetype/config/ftconfig.h",
         );
     } else {
-        const ftconfig = context.builder.addConfigHeader(.{
+        const ftconfig = context.addConfigHeader(.{
             .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
             .include_path = "freetype/config/ftconfig.h",
         }, .{
@@ -23,7 +23,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
         lib.installConfigHeader(ftconfig, .{});
     }
 
-    const ftmodule = context.builder.addConfigHeader(.{
+    const ftmodule = context.addConfigHeader(.{
         .style = .{.cmake = .{.path = "buildsrc/ftmodule.h.in"}},
         .include_path = "freetype/config/ftmodule.h",
     }, .{});
@@ -31,7 +31,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
     lib.addConfigHeader(ftmodule);
     lib.installConfigHeader(ftmodule, .{});
 
-    const ftoption = context.builder.addConfigHeader(.{
+    const ftoption = context.addConfigHeader(.{
         .style = .{ .cmake = .{ .path = "buildsrc/ftoption.h.in" } },
         .include_path = "freetype/config/ftoption.h",
     }, .{
@@ -164,8 +164,8 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
         "config/mac-support.h",
         "config/public-macros.h",
     }) |name| lib.installHeader(
-        context.builder.fmt("third_party/freetype/include/freetype/{s}", .{name}),
-        context.builder.fmt("freetype/{s}", .{name}),
+        context.fmt("third_party/freetype/include/freetype/{s}", .{name}),
+        context.fmt("freetype/{s}", .{name}),
     );
 
     lib.addCSourceFiles(&.{
