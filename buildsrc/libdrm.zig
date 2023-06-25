@@ -9,29 +9,25 @@ const BuildContext = @import("BuildContext.zig");
 pub fn addLibdrm(context: *BuildContext) *Step.Compile {
     const lib = context.addStaticCLibrary("drm");
 
-    lib.addConfigHeader(context.addConfigHeader(.{
-        .include_path = "config.h",
-    }, .{
-        .HAVE_LIBDRM_ATOMIC_PRIMITIVES = 1,
-        .HAVE_LIB_ATOMIC_OPS = 1,
-        .HAVE_SYS_SYSCTL_H = @intFromBool(!context.target.isLinux()),
-        .HAVE_SYS_SELECT_H = 1,
-        .HAVE_ALLOCA_H = 1,
-        .MAJOR_IN_SYSMACROS = 1,
-        .MAJOR_IN_MKDEV = 1,
-        .HAVE_OPEN_MEMSTREAM = 1,
-        .HAVE_VISIBILITY = 1,
-        .HAVE_EXYNOS = 0,
-        .HAVE_FREEDRENO_KGSL = 0,
-        .HAVE_INTEL = 0,
-        .HAVE_NOUVEAU = 0,
-        .HAVE_RADEON = 0,
-        .HAVE_VC4 = 0,
-        .HAVE_VMWGFX = 0,
-        .HAVE_CAIRO = 0,
-        .HAVE_VALGRIND = 0,
-        ._GNU_SOURCE = 1,
-    }));
+    lib.defineCMacro("_GNU_SOURCE", "");
+    lib.defineCMacro("HAVE_LIBDRM_ATOMIC_PRIMITIVES", "1");
+    lib.defineCMacro("HAVE_LIB_ATOMIC_OPS", "1");
+    lib.defineCMacro("HAVE_SYS_SYSCTL_H", if (context.target.isLinux()) "0" else "1");
+    lib.defineCMacro("HAVE_SYS_SELECT_H", "1");
+    lib.defineCMacro("HAVE_ALLOCA_H", "1");
+    lib.defineCMacro("MAJOR_IN_SYSMACROS", "1");
+    // lib.defineCMacro("MAJOR_IN_MKDEV", "1");
+    lib.defineCMacro("HAVE_OPEN_MEMSTREAM", "1");
+    lib.defineCMacro("HAVE_VISIBILITY", "1");
+    lib.defineCMacro("HAVE_EXYNOS", "0");
+    lib.defineCMacro("HAVE_FREEDRENO_KGSL", "0");
+    lib.defineCMacro("HAVE_INTEL", "0");
+    lib.defineCMacro("HAVE_NOUVEAU", "0");
+    lib.defineCMacro("HAVE_RADEON", "0");
+    lib.defineCMacro("HAVE_VC4", "0");
+    lib.defineCMacro("HAVE_VMWGFX", "0");
+    lib.defineCMacro("HAVE_CAIRO", "0");
+    lib.defineCMacro("HAVE_VALGRIND", "0");
 
     // Just copying the file, as a workaround for not being able to directly include a generated
     // file
