@@ -10,9 +10,14 @@ pub fn build(b: *Build) void {
     const lib_freetype = @import("buildsrc/freetype.zig").addFreetype(context);
     const lib_harfbuzz = @import("buildsrc/harfbuzz.zig").addHarfbuzz(context, lib_freetype);
     const lib_glfw = @import("buildsrc/glfw.zig").addGlfw(context);
-    const lib_drm = @import("buildsrc/libdrm.zig").addLibdrm(context);
+    // const lib_drm = @import("buildsrc/libdrm.zig").addLibdrm(context);
 
     const pm_common = context.projectModule("common");
+
+    const pm_drm = context.projectModule("drm");
+    pm_drm.addIncludePath("third_party/libdrm");
+    pm_drm.addIncludePath("third_party/libdrm/include/drm");
+    pm_drm.linkLibC();
 
     const pm_freetype = context.projectModule("freetype");
     pm_freetype.addMixedModule("common", pm_common);
@@ -36,7 +41,7 @@ pub fn build(b: *Build) void {
     pm_glfw.addTo(app_hello_glfw, "glfw");
 
     const app_hello_drm = context.addApp("hello_drm");
-    app_hello_drm.linkLibrary(lib_drm);
+    pm_drm.addTo(app_hello_drm, "drm");
 
     if (context.target.isDarwin()) {
         const pm_objc = context.projectModule("objc");

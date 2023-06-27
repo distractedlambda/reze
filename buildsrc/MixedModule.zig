@@ -18,6 +18,7 @@ const AdditionalConfig = union(enum) {
     link_lib_cpp: void,
     define_c_macro: struct { name: []const u8, value: ?[]const u8 },
     link_system_library: []const u8,
+    add_include_path: []const u8,
     add_mixed_module: *MixedModule,
 
     fn applyTo(self: @This(), step: *Step.Compile) void {
@@ -27,6 +28,7 @@ const AdditionalConfig = union(enum) {
             .link_lib_c => step.linkLibC(),
             .link_lib_cpp => step.linkLibCpp(),
             .define_c_macro => |nv| step.defineCMacro(nv.name, nv.value),
+            .add_include_path => |p| step.addIncludePath(p),
             .link_system_library => |name| step.linkSystemLibrary(name),
             .add_mixed_module => |mm| mm.applyAdditionalConfigTo(step),
         }
@@ -83,6 +85,10 @@ pub fn defineCMacro(self: *@This(), name: []const u8, value: ?[]const u8) void {
 
 pub fn linkSystemLibrary(self: *@This(), name: []const u8) void {
     self.appendAdditionalConfig(.{ .link_system_library = self.dupe(name) });
+}
+
+pub fn addIncludePath(self: *@This(), path: []const u8) void {
+    self.appendAdditionalConfig(.{ .add_include_path = self.dupe(path) });
 }
 
 pub fn addModule(self: *@This(), name: []const u8, module: *Module) void {

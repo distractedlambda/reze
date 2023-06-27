@@ -44,7 +44,7 @@ pub fn addLibdrm(context: *BuildContext) *Step.Compile {
         "xf86drmMode.h",
     }) |name| lib.installHeader(
         context.fmt("third_party/libdrm/{s}", .{name}),
-        context.fmt("libdrm/{s}", .{name}),
+        name
     );
 
     for ([_][]const u8{
@@ -69,7 +69,7 @@ pub fn addLibdrm(context: *BuildContext) *Step.Compile {
         "virtgpu_drm.h",
     }) |name| lib.installHeader(
         context.fmt("third_party/libdrm/include/drm/{s}", .{name}),
-        context.fmt("libdrm/{s}", .{name}),
+        name,
     );
 
     lib.addCSourceFiles(&.{
