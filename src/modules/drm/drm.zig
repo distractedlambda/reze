@@ -24,9 +24,10 @@ fn ioctl(fd: std.c.fd_t, request: c_ulong, arg: ?*anyopaque) !c_int {
             .INTR, .AGAIN => continue,
             .BADF => unreachable,
             .FAULT => unreachable,
-            .INVAL => error.Invalid,
-            .NOTTY => error.NoTty,
-            .OPNOTSUPP => error.OperationNotSupported,
+            .ACCES => error.PermissionDenied,
+            .INVAL => error.InvalidArgument,
+            .NOTTY => error.InappropriateRequest,
+            .OPNOTSUPP => error.NotSupported,
             else => |e| std.os.unexpectedErrno(e),
         };
     }
@@ -41,13 +42,13 @@ pub const Version = struct {
     desc: []const u8,
 
     pub fn get(device: std.c.fd_t, allocator: std.mem.Allocator) !@This() {
-        var extern_version = std.mem.zeroes(c.drm_version_t);
+        var ext = std.mem.zeroes(c.drm_version_t);
 
-        _ = try ioctl(device, c.DRM_IOCTL_VERSION, &extern_version);
+        _ = try ioctl(device, c.DRM_IOCTL_VERSION, &ext);
 
-        const name_len: usize = @intCast(extern_version.name_len);
-        const date_len: usize = @intCast(extern_version.date_len);
-        const desc_len: usize = @intCast(extern_version.desc_len);
+        const name_len: usize = @intCast(ext.name_len);
+        const date_len: usize = @intCast(ext.date_len);
+        const desc_len: usize = @intCast(ext.desc_len);
 
         const name = try allocator.alloc(u8, name_len);
         errdefer allocator.free(name);
@@ -59,16 +60,16 @@ pub const Version = struct {
         errdefer allocator.free(desc);
 
         // FIXME: do we need an additional padding byte?
-        extern_version.name = name.ptr;
-        extern_version.date = date.ptr;
-        extern_version.desc = desc.ptr;
+        ext.name = name.ptr;
+        ext.date = date.ptr;
+        ext.desc = desc.ptr;
 
-        _ = try ioctl(device, c.DRM_IOCTL_VERSION, &extern_version);
+        _ = try ioctl(device, c.DRM_IOCTL_VERSION, &ext);
 
         return .{
-            .major = extern_version.version_major,
-            .minor = extern_version.version_minor,
-            .patch = extern_version.version_patchlevel,
+            .major = ext.version_major,
+            .minor = ext.version_minor,
+            .patch = ext.version_patchlevel,
             .name = name,
             .date = date,
             .desc = desc,
