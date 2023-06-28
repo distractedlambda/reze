@@ -15,7 +15,6 @@ pub fn build(b: *Build) void {
     const pm_common = context.projectModule("common");
 
     const pm_drm = context.projectModule("drm");
-    pm_drm.addIncludePath("third_party/libdrm");
     pm_drm.addIncludePath("third_party/libdrm/include/drm");
     pm_drm.linkLibC();
 
