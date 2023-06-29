@@ -13,3 +13,9 @@
 [submodule "third_party/drm"]
 	path = third_party/libdrm
 	url = https://gitlab.freedesktop.org/mesa/drm.git
+[submodule "substrate/third_party/poky"]
+	path = substrate/third_party/poky
+	url = git://git.yoctoproject.org/poky
+[submodule "substrate/third_party/meta-raspberrypi"]
+	path = substrate/third_party/meta-raspberrypi
+	url = git://git.yoctoproject.org/meta-raspberrypi
