@@ -8,3 +8,8 @@ IMAGE_FEATURES += "\
     tools-debug \
     tools-profile \
     "
+
+IMAGE_INSTALL += "\
+    rsync \
+    strace \
+    "
