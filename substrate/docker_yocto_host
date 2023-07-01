@@ -3,6 +3,6 @@
 substrate_dir="$(realpath "$(dirname "$0")")"
 
 docker run -it --rm \
-    -v "$substrate_dir:/substrate:ro" \
+    -v "$substrate_dir:/substrate" \
     -v "$1:/build" \
     "$(docker build -q "$substrate_dir/docker/yocto_host")"
