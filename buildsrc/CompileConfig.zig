@@ -7,6 +7,8 @@ const FileSource = Build.FileSource;
 const Module = Build.Module;
 const Step = Build.Step;
 
+const CompileConfig = @This();
+
 config_items: ArrayList(ConfigItem),
 
 const ConfigItem = union(enum) {
@@ -19,13 +21,12 @@ const ConfigItem = union(enum) {
     link_library: *Step.Compile,
     link_system_library: []const u8,
 
-    include: *const @This(),
+    include: *const CompileConfig,
 
     fn applyTo(self: @This(), step: *Step.Compile) void {
         switch (self) {
             .add_config_header => |ch| step.addConfigHeader(ch),
             .add_include_path => |p| step.addIncludePath(p),
-            .add_module => |m| step.addModule(m.name, m.module),
             .define_c_macro => |nv| step.defineCMacro(nv.name, nv.value),
             .link_framework => |name| step.linkFramework(name),
             .link_lib_c => step.linkLibC(),
@@ -38,7 +39,7 @@ const ConfigItem = union(enum) {
 };
 
 pub fn create(allocator: Allocator) *@This() {
-    const self = allocator.alloc(@This()) catch @panic("OOM");
+    const self = allocator.create(@This()) catch @panic("OOM");
     self.* = .{ .config_items = ArrayList(ConfigItem).init(allocator) };
     return self;
 }

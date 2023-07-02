@@ -10,7 +10,7 @@ pub fn open(path: []const u8) !@This() {
         .fd = fd,
         .contents = try std.os.mmap(
             null,
-            @intCast(usize, (try std.os.fstat(fd)).size),
+            @intCast((try std.os.fstat(fd)).size),
             std.os.PROT.READ,
             std.os.MAP.PRIVATE,
             fd,

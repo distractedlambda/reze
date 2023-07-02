@@ -73,18 +73,18 @@ pub fn projectModule(self: *@This(), name: []const u8) *ProjectModule {
 pub fn addProjectModuleUnitTests(self: *@This()) void {
     var pm_iter = self.project_modules.valueIterator();
     while (pm_iter.next()) |project_module| {
-        const tests_name = self.builder.fmt("test_{s}", .{project_module.name});
+        const tests_name = self.builder.fmt("test_{s}", .{project_module.*.name});
 
         const tests = self.builder.addTest(.{
             .name = tests_name,
-            .root_source_file = project_module.module.source_file,
+            .root_source_file = project_module.*.module.source_file,
             .target = self.target,
             .optimize = self.optimize,
         });
 
-        project_module.compile_config.applyTo(tests);
+        project_module.*.compile_config.applyTo(tests);
 
-        var dep_iter = project_module.module.dependencies.iterator();
+        var dep_iter = project_module.*.module.dependencies.iterator();
         while (dep_iter.next()) |dep_kv| {
             tests.addModule(dep_kv.key_ptr.*, dep_kv.value_ptr.*);
         }
@@ -94,7 +94,7 @@ pub fn addProjectModuleUnitTests(self: *@This()) void {
 
         self.builder.step(
             tests_name,
-            self.builder.fmt("Run unit tests for the '{s}' module", .{project_module.name}),
+            self.builder.fmt("Run unit tests for the '{s}' module", .{project_module.*.name}),
         ).dependOn(&run_tests.step);
 
         self.run_all_tests.dependOn(&run_tests.step);

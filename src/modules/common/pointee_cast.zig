@@ -4,10 +4,10 @@ pub fn pointeeCast(comptime T: type, ptr: anytype) PointeeCast(T, @TypeOf(ptr)) 
 
         .ErrorUnion => pointeeCast(T, try ptr),
 
-        .Pointer => |tinfo| @ptrCast(
-            PointeeCast(T, @TypeOf(ptr)),
-            if (@typeInfo(tinfo.child) == .Opaque) @alignCast(@alignOf(T), ptr) else ptr,
-        ),
+        .Pointer => |tinfo| if (@typeInfo(tinfo.child) == .Opaque)
+            @ptrCast(@alignCast(ptr))
+        else
+            @ptrCast(ptr),
 
         else => unreachable,
     };

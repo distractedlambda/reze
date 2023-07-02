@@ -30,11 +30,11 @@ pub fn build(b: *Build) void {
     _ = pm_wasmrt;
 
     const app_hello_drm = context.addApp("hello_drm");
-    pm_drm.addTo(app_hello_drm, "drm");
+    pm_drm.addTo(app_hello_drm);
 
     if (context.target.isDarwin()) {
         const pm_objc = context.projectModule("objc");
-        pm_objc.linkSystemLibrary("objc");
+        pm_objc.compile_config.linkSystemLibrary("objc");
     }
 
     context.addProjectModuleUnitTests();
