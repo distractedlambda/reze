@@ -1,16 +1,15 @@
 const std = @import("std");
 
 const BuildContext = @import("BuildContext.zig");
+const CompileConfig = @import("CompileConfig.zig");
 
-pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
+pub fn addFreetype(context: *BuildContext) *CompileConfig {
+    const downstream_config = context.createCompileConfig();
+
     const lib = context.addStaticCLibrary("freetype");
+    downstream_config.linkLibrary(lib);
 
-    if (context.target.isWindows()) {
-        lib.installHeader(
-            "third_party/freetype/include/freetype/config/ftconfig.h",
-            "freetype/config/ftconfig.h",
-        );
-    } else {
+    if (!context.target.isWindows()) {
         const ftconfig = context.addConfigHeader(.{
             .style = .{ .autoconf = .{ .path = "third_party/freetype/builds/unix/ftconfig.h.in" } },
             .include_path = "freetype/config/ftconfig.h",
@@ -20,7 +19,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
         });
 
         lib.addConfigHeader(ftconfig);
-        lib.installConfigHeader(ftconfig, .{});
+        downstream_config.addConfigHeader(ftconfig);
     }
 
     const ftmodule = context.addConfigHeader(.{
@@ -29,7 +28,7 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
     }, .{});
 
     lib.addConfigHeader(ftmodule);
-    lib.installConfigHeader(ftmodule, .{});
+    downstream_config.addConfigHeader(ftmodule);
 
     const ftoption = context.addConfigHeader(.{
         .style = .{ .autoconf = .{ .path = "buildsrc/ftoption.h.in" } },
@@ -105,68 +104,10 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
     });
 
     lib.addConfigHeader(ftoption);
-    lib.installConfigHeader(ftoption, .{});
+    downstream_config.addConfigHeader(ftoption);
 
     lib.addIncludePath("third_party/freetype/include");
-
-    lib.installHeader("third_party/freetype/include/ft2build.h", "ft2build.h");
-
-    for ([_][]const u8{
-        "freetype.h",
-        "ftadvanc.h",
-        "ftbbox.h",
-        "ftbdf.h",
-        "ftbitmap.h",
-        "ftbzip2.h",
-        "ftcache.h",
-        "ftchapters.h",
-        "ftcid.h",
-        "ftcolor.h",
-        "ftdriver.h",
-        "fterrdef.h",
-        "fterrors.h",
-        "ftfntfmt.h",
-        "ftgasp.h",
-        "ftglyph.h",
-        "ftgxval.h",
-        "ftgzip.h",
-        "ftimage.h",
-        "ftincrem.h",
-        "ftlcdfil.h",
-        "ftlist.h",
-        "ftlogging.h",
-        "ftlzw.h",
-        "ftmac.h",
-        "ftmm.h",
-        "ftmodapi.h",
-        "ftmoderr.h",
-        "ftotval.h",
-        "ftoutln.h",
-        "ftparams.h",
-        "ftpfr.h",
-        "ftrender.h",
-        "ftsizes.h",
-        "ftsnames.h",
-        "ftstroke.h",
-        "ftsynth.h",
-        "ftsystem.h",
-        "fttrigon.h",
-        "fttypes.h",
-        "ftwinfnt.h",
-        "otsvg.h",
-        "t1tables.h",
-        "ttnameid.h",
-        "tttables.h",
-        "tttags.h",
-        "config/ftheader.h",
-        "config/ftstdlib.h",
-        "config/integer-types.h",
-        "config/mac-support.h",
-        "config/public-macros.h",
-    }) |name| lib.installHeader(
-        context.fmt("third_party/freetype/include/freetype/{s}", .{name}),
-        context.fmt("freetype/{s}", .{name}),
-    );
+    downstream_config.addIncludePath("third_party/freetype/include");
 
     lib.addCSourceFiles(&.{
         "third_party/freetype/src/autofit/autofit.c",
@@ -191,9 +132,5 @@ pub fn addFreetype(context: *BuildContext) *std.Build.Step.Compile {
 
     lib.defineCMacro("FT2_BUILD_LIBRARY", null);
 
-    return lib;
-}
-
-fn definedIf(condition: bool) ?void {
-    return if (condition) {} else null;
+    return downstream_config;
 }

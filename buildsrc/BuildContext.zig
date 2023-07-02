@@ -5,7 +5,8 @@ const CrossTarget = std.zig.CrossTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
 const Step = Build.Step;
 
-const MixedModule = @import("MixedModule.zig");
+const CompileConfig = @import("CompileConfig.zig");
+const ProjectModule = @import("ProjectModule.zig");
 
 builder: *Build,
 target: CrossTarget,
@@ -13,7 +14,7 @@ optimize: OptimizeMode,
 single_threaded: bool,
 run_all_tests: *Step,
 python_program: ?[]const u8,
-project_modules: std.StringHashMapUnmanaged(*MixedModule) = .{},
+project_modules: std.StringHashMapUnmanaged(*ProjectModule) = .{},
 
 pub fn create(builder: *Build) *@This() {
     const self = builder.allocator.create(@This()) catch @panic("OOM");
@@ -57,14 +58,12 @@ pub fn addApp(self: *@This(), name: []const u8) *Step.Compile {
     return app;
 }
 
-pub fn projectModule(self: *@This(), name: []const u8) *MixedModule {
-    const slot = self.project_modules.getOrPut(
-        self.builder.allocator,
-        self.builder.dupe(name),
-    ) catch @panic("OOM");
+pub fn projectModule(self: *@This(), name: []const u8) *ProjectModule {
+    const slot = self.project_modules.getOrPut(self.builder.allocator, name) catch @panic("OOM");
 
-    if (!slot.found_existing) slot.value_ptr.* = MixedModule.create(
+    if (!slot.found_existing) slot.value_ptr.* = ProjectModule.create(
         self.builder,
+        name,
         .{ .path = self.builder.fmt("src/modules/{s}/{s}.zig", .{ name, name }) },
     );
 
@@ -72,23 +71,20 @@ pub fn projectModule(self: *@This(), name: []const u8) *MixedModule {
 }
 
 pub fn addProjectModuleUnitTests(self: *@This()) void {
-    var pm_iter = self.project_modules.iterator();
-    while (pm_iter.next()) |pm_kv| {
-        const name = pm_kv.key_ptr.*;
-        const module = pm_kv.value_ptr.*;
-
-        const tests_name = self.builder.fmt("test_{s}", .{name});
+    var pm_iter = self.project_modules.valueIterator();
+    while (pm_iter.next()) |project_module| {
+        const tests_name = self.builder.fmt("test_{s}", .{project_module.name});
 
         const tests = self.builder.addTest(.{
             .name = tests_name,
-            .root_source_file = module.zig_module.source_file,
+            .root_source_file = project_module.module.source_file,
             .target = self.target,
             .optimize = self.optimize,
         });
 
-        module.applyAdditionalConfigTo(tests);
+        project_module.compile_config.applyTo(tests);
 
-        var dep_iter = module.zig_module.dependencies.iterator();
+        var dep_iter = project_module.module.dependencies.iterator();
         while (dep_iter.next()) |dep_kv| {
             tests.addModule(dep_kv.key_ptr.*, dep_kv.value_ptr.*);
         }
@@ -98,7 +94,7 @@ pub fn addProjectModuleUnitTests(self: *@This()) void {
 
         self.builder.step(
             tests_name,
-            self.builder.fmt("Run unit tests for the '{s}' module", .{name}),
+            self.builder.fmt("Run unit tests for the '{s}' module", .{project_module.name}),
         ).dependOn(&run_tests.step);
 
         self.run_all_tests.dependOn(&run_tests.step);
@@ -136,4 +132,8 @@ pub fn addConfigHeader(
     if (options.style.getFileSource()) |fs| fs.addStepDependencies(&config_header.step);
 
     return config_header;
+}
+
+pub fn createCompileConfig(self: *@This()) *CompileConfig {
+    return CompileConfig.create(self.builder.allocator);
 }

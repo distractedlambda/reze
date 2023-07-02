@@ -3,11 +3,14 @@ const std = @import("std");
 const Step = std.build.Step;
 
 const BuildContext = @import("BuildContext.zig");
+const CompileConfig = @import("CompileConfig.zig");
 
-pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Compile {
+pub fn addHarfbuzz(context: *BuildContext, freetype_config: *CompileConfig) *CompileConfig {
+    const downstream_config = context.createCompileConfig();
+    downstream_config.include(freetype_config);
+
     const lib = context.addStaticCppLibrary("harfbuzz");
-
-    lib.linkLibrary(lib_freetype);
+    downstream_config.linkLibrary(lib);
 
     lib.defineCMacro("HB_NO_OT_FONT", null);
     lib.defineCMacro("HB_NO_FALLBACK_SHAPE", null);
@@ -75,7 +78,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
     });
 
     lib.addConfigHeader(hb_version_h);
-    lib.installConfigHeader(hb_version_h, .{ .dest_rel_path = "harfbuzz/hb-version.h" });
+    downstream_config.addConfigHeader(hb_version_h);
 
     const hb_features_h = context.addConfigHeader(.{
         .style = .{ .autoconf = .{ .path = "buildsrc/hb-features.h.in" } },
@@ -94,45 +97,10 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
     });
 
     lib.addConfigHeader(hb_features_h);
-    lib.installConfigHeader(hb_features_h, .{ .dest_rel_path = "harfbuzz/hb-features.h" });
+    downstream_config.addConfigHeader(hb_features_h);
 
-    // lib.addIncludePath("third_party/harfbuzz/src");
-
-    for ([_][]const u8{
-        "hb-aat-layout.h",
-        "hb-aat.h",
-        "hb-blob.h",
-        "hb-buffer.h",
-        "hb-common.h",
-        "hb-cplusplus.hh",
-        "hb-deprecated.h",
-        "hb-draw.h",
-        "hb-face.h",
-        "hb-font.h",
-        "hb-ft.h",
-        "hb-map.h",
-        "hb-ot-color.h",
-        "hb-ot-deprecated.h",
-        "hb-ot-font.h",
-        "hb-ot-layout.h",
-        "hb-ot-math.h",
-        "hb-ot-meta.h",
-        "hb-ot-metrics.h",
-        "hb-ot-name.h",
-        "hb-ot-shape.h",
-        "hb-ot-var.h",
-        "hb-ot.h",
-        "hb-paint.h",
-        "hb-set.h",
-        "hb-shape-plan.h",
-        "hb-shape.h",
-        "hb-style.h",
-        "hb-unicode.h",
-        "hb.h",
-    }) |name| lib.installHeader(
-        context.fmt("third_party/harfbuzz/src/{s}", .{name}),
-        context.fmt("harfbuzz/{s}", .{name}),
-    );
+    // FIXME: come up with a way to do this that doesn't pollute the include path so much
+    downstream_config.addIncludePath("third_party/harfbuzz/src");
 
     lib.addCSourceFiles(&.{
         "third_party/harfbuzz/src/hb-aat-layout.cc",
@@ -197,7 +165,7 @@ pub fn addHarfbuzz(context: *BuildContext, lib_freetype: *Step.Compile) *Step.Co
         "-fvisibility-inlines-hidden",
     });
 
-    return lib;
+    return downstream_config;
 }
 
 fn definedIf(condition: bool) ?u1 {
