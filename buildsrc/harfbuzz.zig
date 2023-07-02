@@ -10,6 +10,7 @@ pub fn addHarfbuzz(context: *BuildContext, freetype_config: *CompileConfig) *Com
     downstream_config.include(freetype_config);
 
     const lib = context.addStaticCppLibrary("harfbuzz");
+    freetype_config.applyTo(lib);
     downstream_config.linkLibrary(lib);
 
     lib.defineCMacro("HB_NO_OT_FONT", null);

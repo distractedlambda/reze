@@ -1,3 +1,3 @@
 pub usingnamespace @cImport({
-    @cInclude("harfbuzz/hb.h");
+    @cInclude("hb.h");
 });

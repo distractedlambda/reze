@@ -352,7 +352,7 @@ pub const Buffer = opaque {
     ) void {
         c.hb_buffer_add_codepoints(
             self.toC(),
-            @ptrCast([*]const u32, text.ptr),
+            @ptrCast(text.ptr),
             checkTextLen(text.len),
             item_offset,
             item_length,
@@ -435,7 +435,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getContentType(self: *const @This()) ContentType {
-        return @enumFromInt(ContentType, c.hb_buffer_get_content_type(self.toC()));
+        return @enumFromInt(c.hb_buffer_get_content_type(self.toC()));
     }
 
     pub fn setDirection(self: *@This(), direction: Direction) void {
@@ -443,7 +443,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getDirection(self: *const @This()) Direction {
-        return @enumFromInt(Direction, c.hb_buffer_get_direction(self.toC()));
+        return @enumFromInt(c.hb_buffer_get_direction(self.toC()));
     }
 
     pub fn setScript(self: *@This(), script: Script) void {
@@ -451,7 +451,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getScript(self: *const @This()) Script {
-        return @enumFromInt(Script, c.hb_buffer_get_script(self.toC()));
+        return @enumFromInt(c.hb_buffer_get_script(self.toC()));
     }
 
     pub fn setLanguage(self: *@This(), language: *const Language) void {
@@ -474,11 +474,11 @@ pub const Buffer = opaque {
     });
 
     pub fn setFlags(self: *@This(), flags: Flags) void {
-        c.hb_buffer_set_flags(self.toC(), @bitCast(c.hb_buffer_flags_t, flags));
+        c.hb_buffer_set_flags(self.toC(), @bitCast(flags));
     }
 
     pub fn getFlags(self: *const @This()) Flags {
-        return @bitCast(Flags, c.hb_buffer_get_flags(self.toC()));
+        return @bitCast(c.hb_buffer_get_flags(self.toC()));
     }
 
     pub const ClusterLevel = CEnum(c.hb_buffer_cluster_level_t, c, .{
@@ -492,7 +492,7 @@ pub const Buffer = opaque {
     }
 
     pub fn getClusterLevel(self: *const @This()) ClusterLevel {
-        return @enumFromInt(ClusterLevel, c.hb_buffer_get_cluster_level(self.toC()));
+        return @enumFromInt(c.hb_buffer_get_cluster_level(self.toC()));
     }
 
     pub fn setLength(self: *@This(), length: c_uint) !void {
@@ -523,8 +523,8 @@ pub const Buffer = opaque {
         var c_properties: c.hb_segment_properties_t = undefined;
         c.hb_buffer_get_segment_properties(self.toC(), &c_properties);
         return .{
-            .direction = @enumFromInt(Direction, c_properties.direction),
-            .script = @enumFromInt(Script, c_properties.script),
+            .direction = @enumFromInt(c_properties.direction),
+            .script = @enumFromInt(c_properties.script),
             .language = pointeeCast(Language, c_properties.language),
         };
     }

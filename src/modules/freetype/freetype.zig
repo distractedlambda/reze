@@ -42,7 +42,7 @@ pub const Encoding = enum(c_int) {
 pub const c_memory = blk: {
     const fns = struct {
         fn alloc(_: [*c]c.FT_MemoryRec_, size: c_long) callconv(.C) ?*anyopaque {
-            return std.c.malloc(@intCast(usize, size));
+            return std.c.malloc(@intCast(size));
         }
 
         fn free(_: [*c]c.FT_MemoryRec_, block: ?*anyopaque) callconv(.C) void {
@@ -55,7 +55,7 @@ pub const c_memory = blk: {
             new_size: c_long,
             block: ?*anyopaque,
         ) callconv(.C) ?*anyopaque {
-            return std.c.realloc(block, @intCast(usize, new_size));
+            return std.c.realloc(block, @intCast(new_size));
         }
     };
 
@@ -77,7 +77,7 @@ pub const FaceSource = union(enum) {
             .memory => |m| {
                 args.flags |= c.FT_OPEN_MEMORY;
                 args.memory_base = m.ptr;
-                args.memory_size = @intCast(c.FT_Long, m.len);
+                args.memory_size = @intCast(m.len);
             },
 
             .stream => |s| {
@@ -139,7 +139,7 @@ pub const Library = opaque {
 
         if (options.params.len != 0) {
             args.flags |= c.FT_OPEN_PARAMS;
-            args.num_params = @intCast(c.FT_Int, options.params.len);
+            args.num_params = @intCast(options.params.len);
             args.params = @constCast(options.params.ptr);
         }
 
@@ -227,7 +227,7 @@ pub const Face = opaque {
     };
 
     pub fn loadGlyph(self: *@This(), glyph_index: c_uint, flags: LoadFlags) !void {
-        return err.check(c.FT_Load_Glyph(self.toC(), glyph_index, @bitCast(c.FT_Int32, flags)));
+        return err.check(c.FT_Load_Glyph(self.toC(), glyph_index, @bitCast(flags)));
     }
 
     pub fn getCharIndex(self: *@This(), charcode: c_ulong) c_uint {
@@ -235,7 +235,7 @@ pub const Face = opaque {
     }
 
     pub fn loadChar(self: *@This(), charcode: c_ulong, flags: LoadFlags) !void {
-        return err.check(c.FT_Load_Char(self.toC(), charcode, @bitCast(c.FT_Int32, flags)));
+        return err.check(c.FT_Load_Char(self.toC(), charcode, @bitCast(flags)));
     }
 };
 
