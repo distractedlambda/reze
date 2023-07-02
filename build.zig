@@ -14,6 +14,7 @@ pub fn build(b: *Build) void {
     const pm_common = context.projectModule("common");
 
     const pm_drm = context.projectModule("drm");
+    pm_drm.dependOn(pm_common);
 
     const pm_freetype = context.projectModule("freetype");
     pm_freetype.dependOn(pm_common);
