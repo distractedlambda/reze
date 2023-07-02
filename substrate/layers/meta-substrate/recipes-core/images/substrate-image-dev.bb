@@ -1,4 +1,4 @@
-require substrate-image-minimal.bb
+require substrate-image-base.bb
 
 IMAGE_FEATURES += "\
     dbg-pkgs \
