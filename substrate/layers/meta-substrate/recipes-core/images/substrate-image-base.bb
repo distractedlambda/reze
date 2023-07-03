@@ -8,13 +8,13 @@ EXTRA_USERS_PARAMS = "\
     useradd -m -G video -p '${SUBSTRATE_PASSWD}' substrate; \
     "
 
-# TODO: make these machine-specific
-DISABLE_OVERSCAN = "1"
-DISABLE_SPLASH = "1"
-BOOT_DELAY = "0"
-BOOT_DELAY_MS = "0"
-DISABLE_RPI_BOOT_LOGO = "1"
-RPI_EXTRA_CONFIG = "\
-    hdmi_enable_4kp60=1\n \
-    arm_boost=1\n \
-    "
+# TODO: integrate these somehow...
+#   DISABLE_OVERSCAN = "1"
+#   DISABLE_SPLASH = "1"
+#   BOOT_DELAY = "0"
+#   BOOT_DELAY_MS = "0"
+#   DISABLE_RPI_BOOT_LOGO = "1"
+#   RPI_EXTRA_CONFIG = "\
+#       hdmi_enable_4kp60=1\n \
+#       arm_boost=1\n \
+#       "
