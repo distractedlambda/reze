@@ -13,3 +13,6 @@
 [submodule "substrate/third_party/meta-raspberrypi"]
 	path = substrate/third_party/meta-raspberrypi
 	url = git://git.yoctoproject.org/meta-raspberrypi
+[submodule "substrate/third_party/meta-openembedded"]
+	path = substrate/third_party/meta-openembedded
+	url = git://git.openembedded.org/meta-openembedded
