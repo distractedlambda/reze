@@ -2,7 +2,6 @@ require substrate-image-base.bb
 
 IMAGE_FEATURES += "\
     dbg-pkgs \
-    debug-tweaks \
     doc-pkgs \
     ssh-server-openssh \
     tools-debug \
@@ -11,5 +10,6 @@ IMAGE_FEATURES += "\
 
 IMAGE_INSTALL += "\
     kmscube \
+    packagegroup-core-full-cmdline \
     rsync \
     "
