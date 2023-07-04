@@ -346,7 +346,7 @@ pub const GemOpen = extern struct {
 };
 
 pub const GetCap = extern struct {
-    capability: u64,
+    capability: Cap,
     value: u64,
 };
 
@@ -462,7 +462,7 @@ pub const EventCrtcSequence = extern struct {
 };
 
 pub const ModeModeinfo = extern struct {
-    clock: u32,
+    clock_kHz: u32,
     hdisplay: u16,
     hsync_start: u16,
     hsync_end: u16,
@@ -474,7 +474,7 @@ pub const ModeModeinfo = extern struct {
     vtotal: u16,
     vscan: u16,
 
-    vrefresh: u32,
+    vrefresh_Hz: u32,
 
     flags: Flags,
     type: Type,
