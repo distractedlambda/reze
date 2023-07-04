@@ -917,3 +917,27 @@ pub const ModeRect = extern struct {
     x2: i32,
     y2: i32,
 };
+
+pub const Cap = enum(u64) {
+    dumb_buffer = 0x1,
+    vblank_high_crtc = 0x2,
+    dumb_preferred_depth = 0x3,
+    dumb_prefer_shadow = 0x4,
+    prime = 0x5,
+    timestamp_monotonic = 0x6,
+    async_page_flip = 0x7,
+    cursor_width = 0x8,
+    cursor_height = 0x9,
+    addfb2_modifiers = 0x10,
+    page_flip_target = 0x11,
+    crtc_in_blank_event = 0x12,
+    syncobj = 0x13,
+    syncobj_timeline = 0x14,
+    _,
+};
+
+pub const PrimeCap = packed struct(u64) {
+    import: bool,
+    @"export": bool,
+    _reserved: u62,
+};

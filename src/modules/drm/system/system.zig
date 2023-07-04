@@ -7,9 +7,9 @@ comptime {
     }
 }
 
+pub usingnamespace @import("fourcc.zig");
 pub usingnamespace @import("types.zig");
-
-pub const ioctls = @import("ioctls.zig");
+pub usingnamespace @import("ioctls.zig");
 
 pub fn ioctl(fd: std.os.fd_t, request: u32, arg: ?*anyopaque) !void {
     while (true) {
