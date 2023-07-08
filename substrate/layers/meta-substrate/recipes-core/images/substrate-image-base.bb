@@ -5,6 +5,10 @@ EXTRA_USERS_PARAMS = "\
     useradd -m -G video -p '${SUBSTRATE_PASSWD}' substrate; \
     "
 
+IMAGE_INSTALL:append = " \
+    mesa \
+    "
+
 # TODO: integrate these somehow...
 #   DISABLE_OVERSCAN = "1"
 #   DISABLE_SPLASH = "1"
