@@ -23,7 +23,7 @@ SRC_URI += "\
     file://no-jffs2.cfg \
     file://no-jfs.cfg \
     file://no-kaiser.cfg \
-    file://no-kernel-address-randomization \
+    file://no-kernel-address-randomization.cfg \
     file://no-loopback-block-device.cfg \
     file://no-mtd.cfg \
     file://no-namespaces.cfg \
