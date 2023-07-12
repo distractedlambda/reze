@@ -1,6 +1,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += "\
+    file://64kb-pages.cfg \
     file://multicore-scheduler.cfg \
     file://no-32bit.cfg \
     file://no-amateur-radio.cfg \
@@ -19,6 +20,7 @@ SRC_URI += "\
     file://no-fuse.cfg \
     file://no-gfs2.cfg \
     file://no-hfs.cfg \
+    file://no-iio.cfg \
     file://no-iso9660-fs.cfg \
     file://no-jffs2.cfg \
     file://no-jfs.cfg \
@@ -39,8 +41,10 @@ SRC_URI += "\
     file://no-overlayfs.cfg \
     file://no-packet-generator.cfg \
     file://no-plan9-resource-sharing.cfg \
+    file://no-raid.cfg \
     file://no-ramdisk.cfg \
     file://no-reiserfs.cfg \
+    file://no-remote-controllers.cfg \
     file://no-rtc.cfg \
     file://no-scsi.cfg \
     file://no-security-models.cfg \
@@ -51,12 +55,14 @@ SRC_URI += "\
     file://no-stack-protector.cfg \
     file://no-swap.cfg \
     file://no-udf-fs.cfg \
+    file://no-usb-network-adapters.cfg \
     file://no-virtualization.cfg \
     file://no-wifi.cfg \
     file://no-xfs.cfg \
     file://no-zram.cfg \
     file://quadcore.cfg \
     file://schedutil-governor.cfg \
+    file://trim-unused-ksyms.cfg \
     file://tune-cortexa72.cfg \
     file://zstd-module-compression.cfg \
     "
