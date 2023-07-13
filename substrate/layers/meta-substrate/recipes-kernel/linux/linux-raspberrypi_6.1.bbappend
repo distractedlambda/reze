@@ -15,6 +15,7 @@ SRC_URI += "\
     file://no-ceph-fs.cfg \
     file://no-drbd.cfg \
     file://no-ecrypt.cfg \
+    file://no-efi.cfg \
     file://no-ethernet-bridging.cfg \
     file://no-f2fs.cfg \
     file://no-fuse.cfg \
