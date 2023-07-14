@@ -1,42 +1,55 @@
 const std = @import("std");
 
 const Build = std.Build;
-
-const BuildContext = @import("buildsrc/BuildContext.zig");
+const CrossTarget = std.zig.CrossTarget;
+const FileSource = Build.FileSource;
+const OptimizeMode = std.builtin.OptimizeMode;
+const Step = Build.Step;
 
 pub fn build(b: *Build) void {
-    const context = BuildContext.create(b);
+    var context = Context.init(b);
+    _ = context.addProjectModule("io");
+}
 
-    const config_freetype = @import("buildsrc/freetype.zig").addFreetype(context);
+const Context = struct {
+    builder: *Build,
+    target: CrossTarget,
+    optimize: OptimizeMode,
+    test_step: *Step,
 
-    const config_harfbuzz = @import("buildsrc/harfbuzz.zig").addHarfbuzz(context, config_freetype);
-
-    const pm_common = context.projectModule("common");
-
-    const pm_drm = context.projectModule("drm");
-    pm_drm.dependOn(pm_common);
-
-    const pm_freetype = context.projectModule("freetype");
-    pm_freetype.dependOn(pm_common);
-    pm_freetype.compile_config.include(config_freetype);
-
-    const pm_harfbuzz = context.projectModule("harfbuzz");
-    pm_harfbuzz.dependOn(pm_common);
-    pm_harfbuzz.compile_config.include(config_harfbuzz);
-
-    const pm_wasm = context.projectModule("wasm");
-    _ = pm_wasm;
-
-    const pm_wasmrt = context.projectModule("wasmrt");
-    _ = pm_wasmrt;
-
-    const app_hello_drm = context.addApp("hello_drm");
-    pm_drm.addTo(app_hello_drm);
-
-    if (context.target.isDarwin()) {
-        const pm_objc = context.projectModule("objc");
-        pm_objc.compile_config.linkSystemLibrary("objc");
+    fn init(b: *Build) @This() {
+        return .{
+            .builder = b,
+            .target = b.standardTargetOptions(.{}),
+            .optimize = b.standardOptimizeOption(.{}),
+            .test_step = b.step("test", "Run all unit tests"),
+        };
     }
 
-    context.addProjectModuleUnitTests();
-}
+    fn fmt(self: *@This(), comptime format: []const u8, args: anytype) []const u8 {
+        return self.builder.fmt(format, args);
+    }
+
+    fn addProjectModule(self: *@This(), name: []const u8) *Build.Module {
+        const root_file = FileSource{
+            .path = self.fmt("src/modules/{s}/{s}.zig", .{ name, name }),
+        };
+
+        const tests = self.builder.addTest(.{
+            .root_source_file = root_file,
+            .target = self.target,
+            .optimize = self.optimize,
+        });
+
+        const run_tests = &self.builder.addRunArtifact(tests).step;
+
+        self.builder.step(
+            self.fmt("test_{s}", .{name}),
+            self.fmt("Run unit tests for the '{s}' module", .{name}),
+        ).dependOn(run_tests);
+
+        self.test_step.dependOn(run_tests);
+
+        return self.builder.addModule(name, .{ .source_file = root_file });
+    }
+};

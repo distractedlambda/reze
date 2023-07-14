@@ -1,16 +1,17 @@
 const std = @import("std");
 
-const c = @import("c.zig");
-const err = @import("err.zig");
-
 const common = @import("common");
-const CEnum = common.CEnum;
 const FixedPoint = common.FixedPoint;
 const pointeeCast = common.pointeeCast;
 
+const c = @cImport({
+    @cInclude("freetype/freetype.h");
+    @cInclude("freetype/ftmodapi.h");
+});
+
 pub const F26Dot6 = FixedPoint(.signed, 26, 6);
 
-pub const PixelMode = enum(u8) {
+pub const PixelMode = enum(c.FT_Pixel_Mode) {
     none = c.FT_PIXEL_MODE_NONE,
     mono = c.FT_PIXEL_MODE_MONO,
     gray = c.FT_PIXEL_MODE_GRAY,
@@ -19,10 +20,24 @@ pub const PixelMode = enum(u8) {
     lcd = c.FT_PIXEL_MODE_LCD,
     lcd_v = c.FT_PIXEL_MODE_LCD_V,
     bgra = c.FT_PIXEL_MODE_BGRA,
-    _,
+
+    test "completeness" {
+        comptime {
+            @setEvalBranchQuota(10000);
+            for (@typeInfo(c).Struct.decls) |decl| {
+                if (decl.is_pub and
+                    std.mem.startsWith(u8, decl.name, "FT_PIXEL_MODE_") and
+                    !std.mem.eql(u8, decl.name, "FT_PIXEL_MODE_MAX"))
+                {
+                    _ = @as(PixelMode, @enumFromInt(@field(c, decl.name)));
+                }
+            }
+        }
+    }
 };
 
-pub const Encoding = enum(c_int) {
+pub const Encoding = enum(c.FT_Encoding) {
+    none = c.FT_ENCODING_NONE,
     ms_symbol = c.FT_ENCODING_MS_SYMBOL,
     unicode = c.FT_ENCODING_UNICODE,
     sjis = c.FT_ENCODING_SJIS,
@@ -36,7 +51,17 @@ pub const Encoding = enum(c_int) {
     adobe_latin_1 = c.FT_ENCODING_ADOBE_LATIN_1,
     old_latin_2 = c.FT_ENCODING_OLD_LATIN_2,
     apple_roman = c.FT_ENCODING_APPLE_ROMAN,
-    _,
+
+    test "completeness" {
+        comptime {
+            @setEvalBranchQuota(10000);
+            for (@typeInfo(c).Struct.decls) |decl| {
+                if (decl.is_pub and std.mem.startsWith(u8, decl.name, "FT_ENCODING_")) {
+                    _ = @as(Encoding, @enumFromInt(@field(c, decl.name)));
+                }
+            }
+        }
+    }
 };
 
 pub const c_memory = blk: {
@@ -67,32 +92,6 @@ pub const c_memory = blk: {
     };
 };
 
-pub const FaceSource = union(enum) {
-    memory: []const u8,
-    stream: *c.FT_StreamRec,
-    path: [*:0]const u8,
-
-    fn populateArgs(self: @This(), args: *c.FT_Open_Args) void {
-        switch (self) {
-            .memory => |m| {
-                args.flags |= c.FT_OPEN_MEMORY;
-                args.memory_base = m.ptr;
-                args.memory_size = @intCast(m.len);
-            },
-
-            .stream => |s| {
-                args.flags |= c.FT_OPEN_STREAM;
-                args.stream = s;
-            },
-
-            .path => |p| {
-                args.flags |= c.FT_OPEN_PATHNAME;
-                args.pathname = @constCast(p);
-            },
-        }
-    }
-};
-
 pub const Library = opaque {
     fn toC(self: anytype) @TypeOf(pointeeCast(c.FT_LibraryRec_, self)) {
         return pointeeCast(c.FT_LibraryRec_, self);
@@ -104,7 +103,7 @@ pub const Library = opaque {
 
     pub fn create(options: CreateOptions) !*@This() {
         var lib: c.FT_Library = null;
-        try err.check(c.FT_New_Library(options.memory, &lib));
+        try checkError(c.FT_New_Library(options.memory, &lib));
         const result = lib.?;
         c.FT_Add_Default_Modules(result);
         c.FT_Set_Default_Properties(result);
@@ -112,11 +111,11 @@ pub const Library = opaque {
     }
 
     pub fn retain(self: *@This()) !void {
-        return err.check(c.FT_Reference_Library(self.toC()));
+        return checkError(c.FT_Reference_Library(self.toC()));
     }
 
     pub fn release(self: *Library) !void {
-        return err.check(c.FT_Done_Library(self.toC()));
+        return checkError(c.FT_Done_Library(self.toC()));
     }
 
     pub const OpenFaceOptions = struct {
@@ -146,7 +145,7 @@ pub const Library = opaque {
         const index = (@as(u31, options.named_instance_index) << 16) | options.face_index;
 
         var face: ?*c.FT_FaceRec = null;
-        try err.check(c.FT_Open_Face(self.toC(), &args, index, &face));
+        try checkError(c.FT_Open_Face(self.toC(), &args, index, &face));
         return pointeeCast(Face, face.?);
     }
 };
@@ -157,11 +156,11 @@ pub const Face = opaque {
     }
 
     pub fn retain(self: *@This()) !void {
-        return err.check(c.FT_Reference_Face(self.toC()));
+        return checkError(c.FT_Reference_Face(self.toC()));
     }
 
     pub fn release(self: *@This()) !void {
-        return err.check(c.FT_Done_Face(self.toC()));
+        return checkError(c.FT_Done_Face(self.toC()));
     }
 
     pub fn hasHorizontalMetrics(self: *const @This()) bool {
@@ -171,7 +170,7 @@ pub const Face = opaque {
     pub fn attachSource(self: *@This(), source: FaceSource) !void {
         var args = std.mem.zeroes(c.FT_Open_Args);
         source.populateArgs(&args);
-        return err.check(c.FT_Attach_Stream(self.toC(), &args));
+        return checkError(c.FT_Attach_Stream(self.toC(), &args));
     }
 
     pub fn setCharSize(
@@ -181,7 +180,7 @@ pub const Face = opaque {
         horz_dpi: c.FT_UInt,
         vert_dpi: c.FT_UInt,
     ) !void {
-        return err.check(c.FT_Set_Char_Size(
+        return checkError(c.FT_Set_Char_Size(
             self.toC(),
             width.repr,
             height.repr,
@@ -191,7 +190,7 @@ pub const Face = opaque {
     }
 
     pub fn setPixelSizes(self: *@This(), width: c_uint, height: c_uint) !void {
-        return err.check(c.FT_Set_Pixel_Sizes(self.toC(), width, height));
+        return checkError(c.FT_Set_Pixel_Sizes(self.toC(), width, height));
     }
 
     pub const LoadFlags = packed struct(u32) {
@@ -227,7 +226,7 @@ pub const Face = opaque {
     };
 
     pub fn loadGlyph(self: *@This(), glyph_index: c_uint, flags: LoadFlags) !void {
-        return err.check(c.FT_Load_Glyph(self.toC(), glyph_index, @bitCast(flags)));
+        return checkError(c.FT_Load_Glyph(self.toC(), glyph_index, @bitCast(flags)));
     }
 
     pub fn getCharIndex(self: *@This(), charcode: c_ulong) c_uint {
@@ -235,7 +234,7 @@ pub const Face = opaque {
     }
 
     pub fn loadChar(self: *@This(), charcode: c_ulong, flags: LoadFlags) !void {
-        return err.check(c.FT_Load_Char(self.toC(), charcode, @bitCast(flags)));
+        return checkError(c.FT_Load_Char(self.toC(), charcode, @bitCast(flags)));
     }
 };
 
@@ -246,33 +245,171 @@ pub const GlyphSlot = opaque {
         return pointeeCast(c.FT_GlyphSlotRec, self);
     }
 
-    pub const RenderMode = CEnum(c.FT_Render_Mode, c, .{
-        .{ "FT_RENDER_MODE_NORMAL", "normal" },
-        .{ "FT_RENDER_MODE_LIGHT", "light" },
-        .{ "FT_RENDER_MODE_MONO", "mono" },
-        .{ "FT_RENDER_MODE_LCD", "lcd" },
-        .{ "FT_RENDER_MODE_LCD_V", "lcd_v" },
-        .{ "FT_RENDER_MODE_SDF", "sdf" },
-    });
-
     pub fn render(self: *@This(), mode: RenderMode) !void {
-        return err.check(c.FT_Render_Glyph(self.toC(), @intFromEnum(mode)));
+        return checkError(c.FT_Render_Glyph(self.toC(), @intFromEnum(mode)));
     }
 };
 
 pub const CharMap = opaque {};
 
-pub const GlyphFormat = CEnum(u32, c, .{
-    .{ "FT_GLYPH_FORMAT_COMPOSITE", "composite" },
-    .{ "FT_GLYPH_FORMAT_BITMAP", "bitmap" },
-    .{ "FT_GLYPH_FORMAT_OUTLINE", "outline" },
-    .{ "FT_GLYPH_FORMAT_PLOTTER", "plotter" },
-    .{ "FT_GLYPH_FORMAT_SVG", "svg" },
-});
+pub const RenderMode = enum(c.FT_Render_Mode) {
+    normal = c.FT_RENDER_MODE_NORMAL,
+    light = c.FT_RENDER_MODE_LIGHT,
+    mono = c.FT_RENDER_MODE_MONO,
+    lcd = c.FT_RENDER_MODE_LCD,
+    lcd_v = c.FT_RENDER_MODE_LCD_V,
+    sdf = c.FT_RENDER_MODE_SDF,
+
+    test "completeness" {
+        comptime {
+            @setEvalBranchQuota(10000);
+            for (@typeInfo(c).Struct.decls) |decl| {
+                if (decl.is_pub and
+                    std.mem.startsWith(u8, decl.name, "FT_RENDER_MODE_") and
+                    !std.mem.eql(u8, decl.name, "FT_RENDER_MODE_MAX"))
+                {
+                    _ = @as(RenderMode, @enumFromInt(@field(c, decl.name)));
+                }
+            }
+        }
+    }
+};
+
+pub const GlyphFormat = enum(c.FT_Glyph_Format) {
+    none = c.FT_GLYPH_FORMAT_NONE,
+    composite = c.FT_GLYPH_FORMAT_COMPOSITE,
+    bitmap = c.FT_GLYPH_FORMAT_BITMAP,
+    outline = c.FT_GLYPH_FORMAT_OUTLINE,
+    plotter = c.FT_GLYPH_FORMAT_PLOTTER,
+    svg = c.FT_GLYPH_FORMAT_SVG,
+
+    test "completeness" {
+        comptime {
+            @setEvalBranchQuota(10000);
+            for (@typeInfo(c).Struct.decls) |decl| {
+                if (decl.is_pub and std.mem.startsWith(u8, decl.name, "FT_GLYPH_FORMAT_")) {
+                    _ = @as(GlyphFormat, @enumFromInt(@field(c, decl.name)));
+                }
+            }
+        }
+    }
+};
+
+pub fn checkError(code: c_int) !void {
+    return switch (code) {
+        c.FT_Err_Ok => {},
+        c.FT_Err_Cannot_Open_Resource => error.CannotOpenResource,
+        c.FT_Err_Unknown_File_Format => error.UnknownFileFormat,
+        c.FT_Err_Invalid_File_Format => error.InvalidFileFormat,
+        c.FT_Err_Invalid_Version => error.InvalidVersion,
+        c.FT_Err_Lower_Module_Version => error.LowerModuleVersion,
+        c.FT_Err_Invalid_Argument => error.InvalidArgument,
+        c.FT_Err_Unimplemented_Feature => error.UnimplementedFeature,
+        c.FT_Err_Invalid_Table => error.InvalidTable,
+        c.FT_Err_Invalid_Offset => error.InvalidOffset,
+        c.FT_Err_Array_Too_Large => error.ArrayTooLarge,
+        c.FT_Err_Missing_Module => error.MissingModule,
+        c.FT_Err_Missing_Property => error.MissingProperty,
+        c.FT_Err_Invalid_Glyph_Index => error.InvalidGlyphIndex,
+        c.FT_Err_Invalid_Character_Code => error.InvalidCharacterCode,
+        c.FT_Err_Invalid_Glyph_Format => error.InvalidGlyphFormat,
+        c.FT_Err_Cannot_Render_Glyph => error.CannotRenderGlyph,
+        c.FT_Err_Invalid_Outline => error.InvalidOutline,
+        c.FT_Err_Invalid_Composite => error.InvalidComposite,
+        c.FT_Err_Too_Many_Hints => error.TooManyHints,
+        c.FT_Err_Invalid_Pixel_Size => error.InvalidPixelSize,
+        c.FT_Err_Invalid_SVG_Document => error.InvalidSVGDocument,
+        c.FT_Err_Invalid_Handle => error.InvalidHandle,
+        c.FT_Err_Invalid_Library_Handle => error.InvalidLibraryHandle,
+        c.FT_Err_Invalid_Driver_Handle => error.InvalidDriverHandle,
+        c.FT_Err_Invalid_Face_Handle => error.InvalidFaceHandle,
+        c.FT_Err_Invalid_Size_Handle => error.InvalidSizeHandle,
+        c.FT_Err_Invalid_Slot_Handle => error.InvalidSlotHandle,
+        c.FT_Err_Invalid_CharMap_Handle => error.InvalidCharMapHandle,
+        c.FT_Err_Invalid_Cache_Handle => error.InvalidCacheHandle,
+        c.FT_Err_Invalid_Stream_Handle => error.InvalidStreamHandle,
+        c.FT_Err_Too_Many_Drivers => error.TooManyDrivers,
+        c.FT_Err_Too_Many_Extensions => error.TooManyExtensions,
+        c.FT_Err_Out_Of_Memory => error.OutOfMemory,
+        c.FT_Err_Unlisted_Object => error.UnlistedObject,
+        c.FT_Err_Cannot_Open_Stream => error.CannotOpenStream,
+        c.FT_Err_Invalid_Stream_Seek => error.InvalidStreamSeek,
+        c.FT_Err_Invalid_Stream_Skip => error.InvalidStreamSkip,
+        c.FT_Err_Invalid_Stream_Read => error.InvalidStreamRead,
+        c.FT_Err_Invalid_Stream_Operation => error.InvalidStreamOperation,
+        c.FT_Err_Invalid_Frame_Operation => error.InvalidFrameOperation,
+        c.FT_Err_Nested_Frame_Access => error.NestedFrameAccess,
+        c.FT_Err_Invalid_Frame_Read => error.InvalidFrameRead,
+        c.FT_Err_Raster_Uninitialized => error.RasterUninitialized,
+        c.FT_Err_Raster_Corrupted => error.RasterCorrupted,
+        c.FT_Err_Raster_Overflow => error.RasterOverflow,
+        c.FT_Err_Raster_Negative_Height => error.RasterNegativeHeight,
+        c.FT_Err_Too_Many_Caches => error.TooManyCaches,
+        c.FT_Err_Invalid_Opcode => error.InvalidOpcode,
+        c.FT_Err_Too_Few_Arguments => error.TooFewArguments,
+        c.FT_Err_Stack_Overflow => error.StackOverflow,
+        c.FT_Err_Code_Overflow => error.CodeOverflow,
+        c.FT_Err_Bad_Argument => error.BadArgument,
+        c.FT_Err_Divide_By_Zero => error.DivideByZero,
+        c.FT_Err_Invalid_Reference => error.InvalidReference,
+        c.FT_Err_Debug_OpCode => error.DebugOpCode,
+        c.FT_Err_ENDF_In_Exec_Stream => error.ENDFInExecStream,
+        c.FT_Err_Nested_DEFS => error.NestedDEFS,
+        c.FT_Err_Invalid_CodeRange => error.InvalidCodeRange,
+        c.FT_Err_Execution_Too_Long => error.ExecutionTooLong,
+        c.FT_Err_Too_Many_Function_Defs => error.TooManyFunctionDefs,
+        c.FT_Err_Too_Many_Instruction_Defs => error.TooManyInstructionDefs,
+        c.FT_Err_Table_Missing => error.TableMissing,
+        c.FT_Err_Horiz_Header_Missing => error.HorizHeaderMissing,
+        c.FT_Err_Locations_Missing => error.LocationsMissing,
+        c.FT_Err_Name_Table_Missing => error.NameTableMissing,
+        c.FT_Err_CMap_Table_Missing => error.CMapTableMissing,
+        c.FT_Err_Hmtx_Table_Missing => error.HmtxTableMissing,
+        c.FT_Err_Post_Table_Missing => error.PostTableMissing,
+        c.FT_Err_Invalid_Horiz_Metrics => error.InvalidHorizMetrics,
+        c.FT_Err_Invalid_CharMap_Format => error.InvalidCharMapFormat,
+        c.FT_Err_Invalid_PPem => error.InvalidPPem,
+        c.FT_Err_Invalid_Vert_Metrics => error.InvalidVertMetrics,
+        c.FT_Err_Could_Not_Find_Context => error.CouldNotFindContext,
+        c.FT_Err_Invalid_Post_Table_Format => error.InvalidPostTableFormat,
+        c.FT_Err_Invalid_Post_Table => error.InvalidPostTable,
+        c.FT_Err_DEF_In_Glyf_Bytecode => error.DEFInGlyfBytecode,
+        c.FT_Err_Missing_Bitmap => error.MissingBitmap,
+        c.FT_Err_Missing_SVG_Hooks => error.MissingSVGHooks,
+        c.FT_Err_Syntax_Error => error.SyntaxError,
+        c.FT_Err_Stack_Underflow => error.StackUnderflow,
+        c.FT_Err_Ignore => error.Ignore,
+        c.FT_Err_No_Unicode_Glyph_Name => error.NoUnicodeGlyphName,
+        c.FT_Err_Glyph_Too_Big => error.GlyphTooBig,
+        c.FT_Err_Missing_Startfont_Field => error.MissingStartfontField,
+        c.FT_Err_Missing_Font_Field => error.MissingFontField,
+        c.FT_Err_Missing_Size_Field => error.MissingSizeField,
+        c.FT_Err_Missing_Fontboundingbox_Field => error.MissingFontboundingboxField,
+        c.FT_Err_Missing_Chars_Field => error.MissingCharsField,
+        c.FT_Err_Missing_Startchar_Field => error.MissingStartcharField,
+        c.FT_Err_Missing_Encoding_Field => error.MissingEncodingField,
+        c.FT_Err_Missing_Bbx_Field => error.MissingBbxField,
+        c.FT_Err_Bbx_Too_Big => error.BbxTooBig,
+        c.FT_Err_Corrupted_Font_Header => error.CorruptedFontHeader,
+        c.FT_Err_Corrupted_Font_Glyphs => error.CorruptedFontGlyphs,
+        else => unreachable,
+    };
+}
+
+test "error code coverage" {
+    comptime {
+        @setEvalBranchQuota(10000);
+        for (@typeInfo(c).Struct.decls) |decl| {
+            if (decl.is_pub and
+                std.mem.startsWith(u8, decl.name, "FT_Err_") and
+                !std.mem.eql(u8, decl.name, "FT_Err_Max"))
+            {
+                _ = checkError(@field(c, decl.name)) catch {};
+            }
+        }
+    }
+}
 
 test {
     std.testing.refAllDecls(@This());
-    std.testing.refAllDecls(Library);
-    std.testing.refAllDecls(Face);
-    std.testing.refAllDecls(GlyphSlot);
 }

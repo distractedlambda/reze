@@ -120,6 +120,13 @@ pub const Connector = packed struct {
 
 pub const Encoder = packed struct {
     id: u32,
+
+    pub const Info = struct {
+        type: system.EncoderType,
+        crtc: Crtc,
+        possible_crtcs: u32,
+        possible_clones: u32,
+    };
 };
 
 pub const ModeResources = struct {
@@ -219,10 +226,25 @@ pub fn getCrtcInfo(self: Device, crtc: Crtc) !Crtc.Info {
     try system.ioctl(self.fd, system.ioctl_mode_getcrtc, &mode_crtc);
 
     return .{
-        .framebuffer = @bitCast(mode_crtc.fb_id),
+        .framebuffer = .{ .id = mode_crtc.fb_id },
         .x = mode_crtc.x,
         .y = mode_crtc.y,
         .gamma_size = mode_crtc.gamma_size,
         .mode = if (mode_crtc.mode_valid != 0) mode_crtc.mode else null,
+    };
+}
+
+pub fn getEncoderInfo(self: Device, encoder: Encoder) !Encoder.Info {
+    var get_encoder = std.mem.zeroes(system.ModeGetEncoder);
+
+    get_encoder.encoder_id = encoder.id;
+
+    try system.ioctl(self.fd, system.ioctl_mode_getencoder, &get_encoder);
+
+    return .{
+        .type = get_encoder.encoder_type,
+        .crtc = .{ .id = get_encoder.crtc_id },
+        .possible_crtcs = get_encoder.possible_crtcs,
+        .possible_clones = get_encoder.possible_clones,
     };
 }

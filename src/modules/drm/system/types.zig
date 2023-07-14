@@ -613,19 +613,19 @@ pub const ModeGetEncoder = extern struct {
 
     possible_crtcs: u32,
     possible_clones: u32,
+};
 
-    pub const EncoderType = enum(u32) {
-        none,
-        dac,
-        tmds,
-        lvds,
-        tvdac,
-        virtual,
-        dsi,
-        dpmst,
-        dpi,
-        _,
-    };
+pub const EncoderType = enum(u32) {
+    none,
+    dac,
+    tmds,
+    lvds,
+    tvdac,
+    virtual,
+    dsi,
+    dpmst,
+    dpi,
+    _,
 };
 
 pub const ModeSubconnector = enum(c_int) {
